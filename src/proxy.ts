@@ -4,9 +4,11 @@ import { createServerClient } from "@supabase/ssr";
 /**
  * Refreshes the Supabase session cookie on every request and blocks anonymous
  * access to the dashboards. Role checks happen in the layouts, which can read
- * the profile row; middleware only answers "is anyone signed in?".
+ * the profile row; this only answers "is anyone signed in?".
+ *
+ * Next 16 renamed this convention from `middleware` to `proxy`.
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -58,7 +60,7 @@ export const config = {
   matcher: [
     /*
      * Everything except static assets and image files — those never need a
-     * session refresh and would triple the middleware invocations.
+     * session refresh and would triple the invocations.
      */
     "/((?!_next/static|_next/image|favicon.ico|decor|images|logo.*\\.png|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],

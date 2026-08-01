@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# supabase CLI link state — machine-local, and pooler-url embeds credentials
+supabase/.temp/
+
+# playwright
+/test-results/
+/playwright-report/

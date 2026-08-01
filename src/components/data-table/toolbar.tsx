@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import type { Table } from "@tanstack/react-table";
@@ -21,23 +21,31 @@ export function DataTableToolbar<T>({
   table,
   filters = [],
   searchPlaceholder = "Search…",
+  searchable = true,
   onChange,
   actions,
 }: {
   table: Table<T>;
   filters?: FilterConfig[];
   searchPlaceholder?: string;
+  /** Hide the search box on views the server cannot text-search. */
+  searchable?: boolean;
   onChange: (patch: Patch) => void;
   actions?: React.ReactNode;
 }) {
   const searchParams = useSearchParams();
-  const [query, setQuery] = useState(searchParams.get("q") ?? "");
+  const urlQuery = searchParams.get("q") ?? "";
+  const [query, setQuery] = useState(urlQuery);
+  const [lastUrlQuery, setLastUrlQuery] = useState(urlQuery);
   const debounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  // Keep in step when the URL changes from elsewhere (back button, reset).
-  useEffect(() => {
-    setQuery(searchParams.get("q") ?? "");
-  }, [searchParams]);
+  // Keep in step when the URL changes from elsewhere (back button, Clear).
+  // Adjusted during render rather than in an effect, so the input never
+  // paints one frame with the stale value.
+  if (urlQuery !== lastUrlQuery) {
+    setLastUrlQuery(urlQuery);
+    setQuery(urlQuery);
+  }
 
   const onQueryChange = (value: string) => {
     setQuery(value);
@@ -58,20 +66,22 @@ export function DataTableToolbar<T>({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="relative min-w-[12rem] flex-1 sm:max-w-xs">
-        <Search
-          className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-soft"
-          aria-hidden="true"
-        />
-        <input
-          type="search"
-          value={query}
-          onChange={(event) => onQueryChange(event.target.value)}
-          placeholder={searchPlaceholder}
-          aria-label={searchPlaceholder}
-          className="h-9 w-full rounded-lg border border-line bg-surface pl-9 pr-3 text-sm text-ink placeholder:text-ink-soft/60 focus:border-brand-red focus:outline-none focus:ring-2 focus:ring-brand-red/20"
-        />
-      </div>
+      {searchable && (
+        <div className="relative min-w-[12rem] flex-1 sm:max-w-xs">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-soft"
+            aria-hidden="true"
+          />
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => onQueryChange(event.target.value)}
+            placeholder={searchPlaceholder}
+            aria-label={searchPlaceholder}
+            className="h-9 w-full rounded-lg border border-line bg-surface pl-9 pr-3 text-sm text-ink placeholder:text-ink-soft/60 focus:border-brand-red focus:outline-none focus:ring-2 focus:ring-brand-red/20"
+          />
+        </div>
+      )}
 
       {filters.map((filter) => (
         <Select

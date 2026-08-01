@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -47,10 +47,15 @@ const ICONS: Record<NavIcon, LucideIcon> = {
 export function Sidebar({ role }: { role: Role }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [lastPathname, setLastPathname] = useState(pathname);
   const groups = navFor(role);
 
-  // Any navigation closes the mobile drawer.
-  useEffect(() => setOpen(false), [pathname]);
+  // Any navigation closes the mobile drawer. Adjusted during render rather
+  // than in an effect, so the drawer never paints over the new page first.
+  if (pathname !== lastPathname) {
+    setLastPathname(pathname);
+    setOpen(false);
+  }
 
   const nav = (
     <nav className="flex flex-1 flex-col gap-6 overflow-y-auto px-3 py-5" aria-label="Dashboard">

@@ -6,7 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "pnpm typecheck && pnpm lint && pnpm test",
+    "db:link": "supabase link --project-ref bavjzxmcjuoyiuhjwbtn",
+    "db:push": "supabase db push",
+    "db:types": "supabase gen types typescript --project-id bavjzxmcjuoyiuhjwbtn > src/lib/supabase/types.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.5.7",

@@ -37,6 +37,8 @@ export type DataTableProps<T> = {
   sort: string | null;
   dir: "asc" | "desc";
   searchPlaceholder?: string;
+  /** Hide the search box on views the server cannot text-search. */
+  searchable?: boolean;
   filters?: FilterConfig[];
   emptyTitle?: string;
   emptyBody?: string;
@@ -59,6 +61,7 @@ export function DataTable<T extends { id: string }>({
   sort,
   dir,
   searchPlaceholder,
+  searchable = true,
   filters,
   emptyTitle = "Nothing here yet",
   emptyBody,
@@ -125,6 +128,7 @@ export function DataTable<T extends { id: string }>({
         table={table}
         filters={filters}
         searchPlaceholder={searchPlaceholder}
+        searchable={searchable}
         onChange={push}
         actions={toolbarActions}
       />

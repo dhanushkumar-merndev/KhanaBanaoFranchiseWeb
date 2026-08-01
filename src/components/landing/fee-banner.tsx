@@ -5,7 +5,7 @@ import { feeHighlights, franchiseFee } from "@/lib/site";
 
 export function FeeBanner() {
   return (
-    <section className="relative py-6 md:py-10">
+    <section id="fee" className="relative py-6 md:py-10">
       <div className="shell">
         <Reveal>
           <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-maroon via-brand-maroon to-brand-maroon-dark px-6 py-9 shadow-[0_28px_64px_-32px_rgba(109,13,18,0.85)] sm:px-10">

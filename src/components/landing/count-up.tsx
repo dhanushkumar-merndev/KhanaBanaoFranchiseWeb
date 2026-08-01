@@ -24,12 +24,15 @@ export function CountUp({
     const el = ref.current;
     if (!el) return;
 
+    let frame = 0;
+
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setDisplay(value);
-      return;
+      // Jump straight to the final value, but from a frame callback rather
+      // than the effect body so it does not cascade an extra render pass.
+      frame = requestAnimationFrame(() => setDisplay(value));
+      return () => cancelAnimationFrame(frame);
     }
 
-    let frame = 0;
     const observer = new IntersectionObserver(
       ([entry], obs) => {
         if (!entry.isIntersecting) return;

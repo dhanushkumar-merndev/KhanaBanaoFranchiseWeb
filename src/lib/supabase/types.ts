@@ -329,6 +329,24 @@ export type AppSettingsRow = {
   updated_at: string;
 };
 
+/** Read-only aggregate view — see supabase/migrations/0004_stats.sql. */
+export type MemberPerformanceRow = {
+  member_id: string;
+  full_name: string;
+  email: string;
+  member_status: ProfileStatus;
+  member_role: Role;
+  assigned_leads: number;
+  contacted_leads: number;
+  accepted_leads: number;
+  rejected_leads: number;
+  followups_completed: number;
+  applications_sent: number;
+  documents_collected: number;
+  payment_proofs_submitted: number;
+  live_conversions: number;
+};
+
 /**
  * Insert shapes. A column is optional on insert when Postgres can fill it in:
  * it is generated, it has a DEFAULT, or it is nullable. Everything else stays
@@ -408,7 +426,12 @@ export type Database = {
       activity_logs: TableDef<ActivityLogRow>;
       app_settings: TableDef<AppSettingsRow>;
     };
-    Views: Record<never, never>;
+    Views: {
+      member_performance: {
+        Row: MemberPerformanceRow;
+        Relationships: [];
+      };
+    };
     Functions: {
       assign_lead_round_robin: {
         Args: { target_lead: string };
@@ -417,6 +440,7 @@ export type Database = {
       mark_overdue_followups: { Args: Record<never, never>; Returns: number };
       current_profile_id: { Args: Record<never, never>; Returns: string | null };
       is_admin: { Args: Record<never, never>; Returns: boolean };
+      admin_dashboard_stats: { Args: Record<never, never>; Returns: Json };
     };
     Enums: Record<never, never>;
     CompositeTypes: Record<never, never>;

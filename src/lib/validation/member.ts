@@ -22,6 +22,4 @@ export const inviteMemberSchema = z.object({
 
 export type InviteMemberInput = z.input<typeof inviteMemberSchema>;
 
-export type ActionResult<T = undefined> =
-  | ({ ok: true } & (T extends undefined ? { data?: never } : { data: T }))
-  | { ok: false; message: string; fieldErrors?: Record<string, string> };
+export type { ActionResult } from "./result";

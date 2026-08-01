@@ -58,6 +58,20 @@ export function parseTableParams(
   };
 }
 
+/**
+ * Narrow a raw query-string value to a known enum member. Filters arrive as
+ * arbitrary strings, and passing one straight into `.eq()` on an enum column
+ * makes Postgres error out — so an unrecognised value becomes "no filter".
+ */
+export function pickEnum<T extends string>(
+  value: string | undefined,
+  allowed: readonly T[],
+): T | undefined {
+  return value && (allowed as readonly string[]).includes(value)
+    ? (value as T)
+    : undefined;
+}
+
 /** Zero-based Postgres range for `.range(from, to)`. */
 export function toRange(params: Pick<TableParams, "page" | "pageSize">) {
   const from = (params.page - 1) * params.pageSize;

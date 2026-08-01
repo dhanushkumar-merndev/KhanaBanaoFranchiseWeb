@@ -11,14 +11,19 @@ Last updated: 2026-08-01
 
 ```bash
 pnpm install
-pnpm dev            # http://localhost:3000
-npx tsc --noEmit    # typecheck
-npx next build      # production build
+pnpm dev          # http://localhost:3000
+pnpm check        # typecheck + lint + tests
+pnpm build        # production build
 ```
 
-`.env` already exists locally with Supabase + Brevo credentials filled in.
-`APPLICATION_TOKEN_SECRET` and `DOCUMENT_TOKEN_SECRET` were generated on
-2026-08-01. See [.env.example](.env.example) for the full list.
+Database (already linked to project `bavjzxmcjuoyiuhjwbtn`):
+
+```bash
+pnpm db:push      # apply pending migrations
+pnpm db:types     # regenerate src/lib/supabase/types.ts from the live schema
+```
+
+`.env` holds the Supabase + Brevo credentials. See [.env.example](.env.example).
 
 ---
 
@@ -29,63 +34,67 @@ npx next build      # production build
 | 1 | Deps, brand theme, fonts | ✅ Done |
 | 2 | Decorative assets + scroll motion | ✅ Done |
 | 3 | Public landing page | ✅ Done |
-| 4 | DB schema + RLS migrations | ✅ Written — **not yet applied to Supabase** |
-| 5 | Email layer (Brevo) | ✅ Core done |
-| 6 | Auth + role guard + protected layout | ⬜ Next |
-| 7 | UI kit + TanStack data table | ⬜ Todo |
-| 8 | Admin: dashboard, members, leads, follow-ups | ⬜ Todo |
-| 9 | Applications, documents, agreements, payments | ⬜ Todo |
-| 10 | Franchises, training, setup, go-live | ⬜ Todo |
-| 11 | Email template admin + logs | ⬜ Todo |
-| 12 | Member dashboard | ⬜ Todo |
-| 13 | Tests (Vitest + RTL + Playwright) | ⬜ Todo |
+| 4 | DB schema + RLS migrations | ✅ **Applied to Supabase** |
+| 5 | Email layer (Brevo) | ✅ Done — 15 templates seeded |
+| 6 | Auth + role guard + protected layout | ✅ Done |
+| 7 | UI kit + TanStack data table | ✅ Done |
+| 8 | Admin dashboard (cards + charts + member performance) | ✅ Done |
+| 9 | Members management | ✅ Done |
+| 10 | Leads list + detail, discussion, accept/reject, reassign | ✅ Done |
+| 11 | Follow-up queues | ✅ Done |
+| 12 | Member dashboard + member pages | ✅ Done |
+| 13 | Unit + component tests | ✅ 86 passing |
+| 14 | Applications (public token form + review) | ⬜ Todo |
+| 15 | Documents (request, upload, per-doc approval) | ⬜ Todo |
+| 16 | Agreements + payments | ⬜ Todo |
+| 17 | Franchises, training, setup, go-live | ⬜ Todo |
+| 18 | Email template admin + logs | ⬜ Todo |
+| 19 | Playwright end-to-end flows | ⬜ Todo |
 
 ---
 
-## ⚠️ Action required before the admin app works
+## ⚠️ One manual step left before anyone can sign in
 
-The migrations in [supabase/migrations/](supabase/migrations/) have **not been
-run** against the live Supabase project. Apply them in order:
+The database is live and an ADMIN profile exists for
+`khanabanaofranchise@gmail.com`, but **Google sign-in is not enabled yet**.
 
-1. `0001_init.sql` — enums, 20 tables, sequences, indexes, member-limit trigger
-2. `0002_rls.sql` — identity helpers, RLS on every table, `assign_lead_round_robin()`
-3. `0003_storage_and_seed.sql` — 5 private buckets + 15 default email templates
+In the Supabase dashboard → Authentication → Providers → Google:
+1. Enable the provider and paste the Google OAuth client ID + secret.
+2. Add redirect URLs: `http://localhost:3000/auth/callback` and the production
+   equivalent.
 
-Either paste into the Supabase SQL editor in order, or `supabase db push`.
+Add further admins with:
 
-Then, in the Supabase dashboard:
-- Enable the **Google** auth provider (Authentication → Providers)
-- Add redirect URL `http://localhost:3000/auth/callback` (and the production URL)
-- Insert the first ADMIN row by hand:
-  ```sql
-  insert into profiles (full_name, email, role, status)
-  values ('Your Name', 'you@gmail.com', 'ADMIN', 'ACTIVE');
-  ```
-  The `auth_user_id` is linked automatically on first Google sign-in.
+```bash
+node scripts/bootstrap-admin.mjs "them@gmail.com" "Their Name" "+919876543210"
+```
+
+Everyone else is invited from **Admin → Members → Invite member**. There is no
+sign-up: `/auth/callback` only admits a Google account that already matches a
+profile row or a PENDING invitation.
+
+---
+
+## Verified against the live database
+
+Confirmed on 2026-08-01 after `supabase db push`:
+
+- All 20 tables + the `member_performance` view exist and are readable.
+- 5 private storage buckets exist with the right MIME/size limits.
+- 15 email templates seeded; `app_settings` has its single row.
+- `admin_dashboard_stats()` returns the full card payload.
+- Inserting a lead generates `KB-L01001`; `assign_lead_round_robin()` correctly
+  returns `null` when there are no active members (spec §9.7);
+  `mark_overdue_followups()` runs. Test row was deleted — `leads` is empty.
 
 ---
 
 ## What exists today
 
 ### Public site — `/`
-Matches the supplied reference design. Sections in order:
-
-| Component | File |
-|---|---|
-| Sticky header + scroll-spy + mobile sheet | [header.tsx](src/components/landing/header.tsx) |
-| Hero + "Stronger Together" seal | [hero.tsx](src/components/landing/hero.tsx) |
-| Stats bar (animated count-up) | [stats-bar.tsx](src/components/landing/stats-bar.tsx) |
-| Why Partner — 4 cards | [why-partner.tsx](src/components/landing/why-partner.tsx) |
-| How It Works — 6-step timeline | [how-it-works.tsx](src/components/landing/how-it-works.tsx) |
-| Who Does What | [who-does-what.tsx](src/components/landing/who-does-what.tsx) |
-| ₹50,000 fee banner | [fee-banner.tsx](src/components/landing/fee-banner.tsx) |
-| Eligibility + investment (spec §6) | [eligibility-investment.tsx](src/components/landing/eligibility-investment.tsx) |
-| Flavours carousel | [flavours.tsx](src/components/landing/flavours.tsx) |
-| Testimonials | [testimonials.tsx](src/components/landing/testimonials.tsx) |
-| Enquiry form (spec §7) | [enquiry-form.tsx](src/components/landing/enquiry-form.tsx) |
-| FAQ accordion | [faq.tsx](src/components/landing/faq.tsx) |
-| CTA banner + footer | [cta-banner.tsx](src/components/landing/cta-banner.tsx), [footer.tsx](src/components/landing/footer.tsx) |
-
+Matches the supplied reference design: header, hero, stats bar, why-partner,
+how-it-works, who-does-what, ₹50,000 fee banner, eligibility + investment,
+flavours carousel, testimonials, enquiry form, FAQ, CTA banner, footer.
 **All copy and image paths live in one file:** [src/lib/site.ts](src/lib/site.ts).
 
 ### Leaf scroll animation (mobile-optimised)
@@ -101,52 +110,79 @@ Matches the supplied reference design. Sections in order:
 - [reveal.tsx](src/components/motion/reveal.tsx) — one shared
   IntersectionObserver, unobserves each element after it reveals.
 
-### Assets
-- `public/decor/*.svg` — hand-built leaves, garlic, cashews, chilli, curry bowl,
-  floral corners, cloche, handshake, ornament.
-- `public/images/*.svg` — **placeholder** food photos. Replace with real
-  photography (keep the file names, or repoint `images` in `src/lib/site.ts`).
+### Admin app
+| Route | File |
+|---|---|
+| `/admin` — 12 cards, 8 charts, member performance | [page.tsx](<src/app/(dashboard)/admin/page.tsx>) |
+| `/admin/members` — team + invitations tabs | [page.tsx](<src/app/(dashboard)/admin/members/page.tsx>) |
+| `/admin/leads` — filterable, sortable, virtualised | [page.tsx](<src/app/(dashboard)/admin/leads/page.tsx>) |
+| `/admin/leads/[id]` — 11 tabs, context actions | [page.tsx](<src/app/(dashboard)/admin/leads/[id]/page.tsx>) |
+| `/admin/follow-ups` — today / upcoming / overdue / completed | [page.tsx](<src/app/(dashboard)/admin/follow-ups/page.tsx>) |
+
+### Member app
+`/member`, `/member/leads`, `/member/leads/[id]`, `/member/follow-ups`.
+Every member query passes a `scopeMemberId`, so the query itself cannot return
+another member's leads regardless of what the URL asks for. A lead belonging to
+someone else 404s exactly like one that does not exist.
+
+### Server actions
+| File | Covers |
+|---|---|
+| `actions/enquiry.ts` | Public enquiry → lead → round-robin → email |
+| `actions/members.ts` | Invite (20 cap), activate/deactivate, revoke, resend |
+| `actions/leads.ts` | Create, log contact, business discussion, accept, reject, reassign, auto-assign, follow-up CRUD |
 
 ### Domain logic (pure, testable) — `src/lib/domain/`
-| File | Contains |
-|---|---|
-| `enums.ts` | Every enum + UI labels, `MAX_ACTIVE_MEMBERS = 20` |
-| `normalize.ts` | Phone/email normalisation |
-| `permissions.ts` | `can(role, action)` — the full action list |
-| `round-robin.ts` | `nextAssignee`, `distribute` |
-| `transitions.ts` | Lead status graph, `canApproveFranchise` |
-| `documents.ts` | `overallDocumentStatus` roll-up |
-| `status.ts` | Badge tone mapping |
+`enums.ts`, `normalize.ts`, `permissions.ts`, `round-robin.ts`,
+`transitions.ts`, `documents.ts`, `status.ts`.
 
-### Data + email
-- `src/lib/supabase/{server,client,admin}.ts` — SSR, browser, service-role clients
-- `src/lib/supabase/types.ts` — hand-maintained `Database` type (mirrors the SQL)
-- `src/lib/email/render.ts` — `{{variable}}` substitution (HTML-escaped)
-- `src/lib/email/send.ts` — Brevo transport; **never throws**, always logs
-- `src/app/actions/enquiry.ts` — public enquiry → lead → round-robin → email
+### Data layer — `src/lib/data/`
+`leads.ts`, `lead-detail.ts`, `followups.ts`, `members.ts` — all `server-only`,
+all take an explicit member scope where relevant.
 
 ---
 
-## Next up (phase 6)
+## Next up
 
-1. **Auth**
-   - `src/middleware.ts` — refresh Supabase session, guard `/admin` + `/member`
-   - `src/app/login/page.tsx` — Google sign-in button
-   - `src/app/auth/callback/route.ts` — exchange code, link `auth_user_id` to
-     the invited profile, reject uninvited Google accounts
-   - `src/app/unauthorized/page.tsx`
-   - `src/lib/auth/session.ts` — `requireProfile()`, `requireAdmin()`
-2. **UI kit** — `src/components/ui/` (button, card, input, dialog, badge, table,
-   tabs, select, sheet). Hand-written shadcn-style; Radix is already installed.
-3. **Data table** — `src/components/data-table/` on TanStack Table + Virtual,
-   server-side pagination/sort/filter, page sizes 20/50/100.
+Build in this order; each unlocks the tab after it on the lead detail page.
+
+1. **Applications** (spec §13) — public `/franchise/application/[token]`,
+   duplicate-submission prevention, admin review. The token table
+   (`application_tokens`) and secrets already exist.
+2. **Documents** (spec §14–15) — request dialog, public upload page, per-document
+   approval with the three-way email confirmation, re-upload with reason,
+   approved documents locked. `overallDocumentStatus()` is written and tested.
+3. **Franchise approval** (spec §16) — gate is `canApproveFranchise()`, already
+   written and tested.
+4. **Agreements** (§17) and **payments** (§18) — manual proof upload + approve/reject
+   with a visible reason. No payment gateway.
+5. **Activation, training, setup, go-live** (§19–20).
+6. **Email template admin + logs** (§21).
+7. **Playwright flows** (§30).
+
+The lead-detail page already renders all 11 tabs; the unbuilt ones show an
+explicit "not wired up yet" panel rather than a blank state, so nobody mistakes
+an unbuilt stage for a stage with no data. Fill them in as each feature lands.
 
 ---
 
 ## Decisions worth remembering
 
-- **No `as const` on `whyPartner`** — it is explicitly typed so the optional
-  `body` field survives.
+- **`proxy.ts`, not `middleware.ts`** — Next 16 renamed the convention; the
+  exported function must be named `proxy`.
+- **Never read the clock during render.** React Compiler's purity rule fails the
+  build on `Date.now()` in a component. "Overdue"/"expired" booleans are computed
+  in `src/lib/data/*` and passed down as data. Same for `setState` inside an
+  effect — use the render-time adjustment pattern (see
+  [toolbar.tsx](src/components/data-table/toolbar.tsx) and
+  [sidebar.tsx](src/components/shell/sidebar.tsx)).
+- **`datetime-local` has no time zone.** The browser reads wall-clock time; the
+  server would parse the same string as UTC — a silent 5.5-hour shift. Always
+  convert with `localInputToIso()` before sending to a server action. All
+  display formatting is pinned to Asia/Kolkata in `src/lib/format.ts`.
+- **Filters must be narrowed before hitting Postgres.** `pickEnum()` in
+  `lib/table/params.ts` drops unrecognised values; passing a raw query-string
+  value into `.eq()` on an enum column makes Postgres error out.
 - `TableDef.Insert` in `types.ts` makes generated, defaulted and nullable
   columns optional. If you add a NOT NULL column with a DEFAULT, add its name
   to `DefaultedKey` or inserts will fail typecheck.
@@ -154,7 +190,25 @@ Matches the supplied reference design. Sections in order:
   `SELECT ... FOR UPDATE` on the single `app_settings` row, so simultaneous
   enquiries cannot claim the same slot. `src/lib/domain/round-robin.ts` mirrors
   the arithmetic for tests only.
+- `member_performance` and `admin_dashboard_stats()` are granted to
+  **service_role only** — the pages calling them already do `requireAdmin()`,
+  so anon/authenticated hold no privilege on them at all.
 - Brand icons (Instagram/Facebook/YouTube/WhatsApp) are hand-inlined in
   `icons.tsx` — lucide v1 dropped them.
 - Email sends never roll back a business action; failures are logged to
   `email_logs` with status `FAILED` or `SKIPPED`.
+- **No `as const` on `whyPartner`** — it is explicitly typed so the optional
+  `body` field survives.
+
+---
+
+## Known limitations
+
+- `public/images/*.svg` are **placeholder** food graphics. Replace with real
+  photography (keep the file names, or repoint `images` in `src/lib/site.ts`).
+- Two React Compiler warnings remain and are not fixable: react-hook-form's
+  `watch()` and TanStack's `useReactTable()` both return non-memoizable
+  functions, so the compiler skips those two components. Both libraries are
+  mandated by the spec.
+- Lead-detail tabs beyond Overview / Activity / Follow-ups are placeholders.
+- No Playwright suite yet.

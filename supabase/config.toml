@@ -1,0 +1,19 @@
+# Supabase CLI project config.
+#
+# `project_id` is the remote project ref, so `supabase db push` targets the
+# right project without passing --project-ref every time. It is not a secret:
+# it is already visible in NEXT_PUBLIC_SUPABASE_URL.
+project_id = "bavjzxmcjuoyiuhjwbtn"
+
+[db]
+# Match the remote so a local `supabase start` behaves the same way.
+major_version = 17
+
+[auth]
+enable_signup = false
+
+# Invitation-only Google sign-in (spec §5). Email/password is never used.
+[auth.external.google]
+enabled = true
+client_id = "env(SUPABASE_AUTH_GOOGLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_GOOGLE_SECRET)"
