@@ -1,0 +1,310 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------
+   KHANA BANAO — brand tokens
+   Palette is driven by the logo: red, blue, beige/gold, warm white.
+------------------------------------------------------------------ */
+
+@theme {
+  /* Core brand */
+  --color-brand-red: #e5483f;
+  --color-brand-crimson: #c1272d;
+  --color-brand-maroon: #8e1218;
+  --color-brand-maroon-dark: #6d0d12;
+  --color-brand-blue: #1398eb;
+  --color-brand-beige: #cdbb9b;
+  --color-brand-gold: #c8a24d;
+  --color-brand-gold-light: #e8c98a;
+  --color-brand-black: #111111;
+
+  /* Surfaces */
+  --color-canvas: #fffaf4;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f7f1e8;
+  --color-line: #e7ddd0;
+
+  /* Text */
+  --color-ink: #1d1d1d;
+  --color-ink-soft: #696158;
+
+  /* Status */
+  --color-ok: #2f9e44;
+  --color-warn: #e9a23b;
+  --color-danger: #d94841;
+  --color-info: #168aad;
+
+  /* Typography */
+  --font-display: var(--font-playfair), "Playfair Display", Georgia, serif;
+  --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  --font-script: var(--font-script), "Great Vibes", cursive;
+
+  /* Motion */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ------------------------------------------------------------------
+   Base
+------------------------------------------------------------------ */
+
+@layer base {
+  * {
+    border-color: var(--color-line);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  /* Lenis drives scrolling itself; native smooth-scroll fights it. */
+  html.lenis,
+  html.lenis body {
+    height: auto;
+  }
+
+  html.lenis {
+    scroll-behavior: auto;
+  }
+
+  .lenis.lenis-smooth {
+    scroll-behavior: auto !important;
+  }
+
+  .lenis.lenis-stopped {
+    overflow: hidden;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    /* Stop decorative overflow from creating a horizontal scrollbar. */
+    overflow-x: clip;
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--color-brand-red) 25%, transparent);
+    color: var(--color-brand-maroon-dark);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand-blue);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    text-wrap: balance;
+  }
+
+  /* Anchor targets clear the sticky header. */
+  section[id] {
+    scroll-margin-top: 96px;
+  }
+}
+
+/* ------------------------------------------------------------------
+   Scroll reveal — driven by IntersectionObserver adding [data-revealed]
+------------------------------------------------------------------ */
+
+@layer utilities {
+  .reveal {
+    opacity: 0;
+    transform: translate3d(0, 28px, 0);
+    transition:
+      opacity 0.75s var(--ease-out-soft),
+      transform 0.75s var(--ease-out-soft);
+    transition-delay: var(--reveal-delay, 0ms);
+    will-change: opacity, transform;
+  }
+
+  .reveal[data-revealed="true"] {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    will-change: auto;
+  }
+
+  .reveal-left {
+    transform: translate3d(-32px, 0, 0);
+  }
+
+  .reveal-right {
+    transform: translate3d(32px, 0, 0);
+  }
+
+  .reveal-zoom {
+    transform: scale3d(0.94, 0.94, 1);
+  }
+
+  /* Section container */
+  .shell {
+    width: 100%;
+    max-width: 1200px;
+    margin-inline: auto;
+    padding-inline: 1.25rem;
+  }
+
+  @media (min-width: 768px) {
+    .shell {
+      padding-inline: 2rem;
+    }
+  }
+
+  /* Thin gold/red rule used under section headings */
+  .rule-ornament {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .rule-ornament::before,
+  .rule-ornament::after {
+    content: "";
+    height: 1px;
+    width: 56px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      var(--color-brand-red)
+    );
+  }
+
+  .rule-ornament::after {
+    background: linear-gradient(to left, transparent, var(--color-brand-red));
+  }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* ------------------------------------------------------------------
+   Decorative leaves — GPU-only transforms, paused off-screen
+------------------------------------------------------------------ */
+
+.leaf {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+  /* Parallax offset written by the scroll controller. */
+  --leaf-y: 0px;
+  --leaf-rot: 0deg;
+  transform: translate3d(0, var(--leaf-y), 0) rotate(var(--leaf-rot));
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+.leaf img,
+.leaf svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.leaf-sway {
+  animation: leaf-sway 7s var(--ease-out-soft) infinite alternate;
+  animation-delay: var(--leaf-delay, 0s);
+}
+
+@keyframes leaf-sway {
+  from {
+    transform: translate3d(0, var(--leaf-y), 0) rotate(var(--leaf-rot))
+      translateY(0) rotate(-2.5deg);
+  }
+  to {
+    transform: translate3d(0, var(--leaf-y), 0) rotate(var(--leaf-rot))
+      translateY(-10px) rotate(2.5deg);
+  }
+}
+
+@keyframes float-slow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+.animate-float-slow {
+  animation: float-slow 6s ease-in-out infinite;
+}
+
+@keyframes marquee-x {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Radix accordion — height is published as a CSS var by the primitive. */
+@keyframes accordion-down {
+  from {
+    height: 0;
+    opacity: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+    opacity: 1;
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+    opacity: 1;
+  }
+  to {
+    height: 0;
+    opacity: 0;
+  }
+}
+
+/* ------------------------------------------------------------------
+   Accessibility / low-power: kill all decorative motion
+------------------------------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .leaf,
+  .leaf-sway,
+  .animate-float-slow {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 780" width="900" height="780" role="img" aria-label="Khana Banao catering spread">
+  <defs>
+    <linearGradient id="bgg" x1="0" y1="0" x2="900" y2="780" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F6E4C4"/><stop offset=".55" stop-color="#D9964E"/><stop offset="1" stop-color="#8A3D14"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.42" r="0.62">
+      <stop stop-color="#fff" stop-opacity=".28"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#EFE3CE"/><stop offset="1" stop-color="#B9A582"/>
+    </linearGradient>
+    <linearGradient id="curry0" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#E9903F"/><stop offset="1" stop-color="#B4471A"/>
+    </linearGradient>
+    <linearGradient id="curry1" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#F2C878"/><stop offset="1" stop-color="#C98A33"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="780" fill="url(#bgg)"/>
+  <rect width="900" height="780" fill="url(#glow)"/>
+  <ellipse cx="450" cy="663.0" rx="468.0" ry="98.3" fill="#000" opacity=".12"/>
+  
+      <ellipse cx="198.0" cy="465.6" rx="104.2" ry="29.5" fill="#000" opacity=".16"/>
+      <circle cx="198.0" cy="424.3" r="98.3" fill="url(#metal)"/>
+      <circle cx="198.0" cy="424.3" r="80.6" fill="url(#curry0)"/>
+      <ellipse cx="176.4" cy="398.8" rx="29.5" ry="15.7" fill="#fff" opacity=".2"/>
+      <ellipse cx="450.0" cy="540.9" rx="129.0" ry="36.5" fill="#000" opacity=".16"/>
+      <circle cx="450.0" cy="489.8" r="121.7" fill="url(#metal)"/>
+      <circle cx="450.0" cy="489.8" r="99.8" fill="url(#curry1)"/>
+      <ellipse cx="423.2" cy="458.2" rx="36.5" ry="19.5" fill="#fff" opacity=".2"/>
+      <ellipse cx="702.0" cy="465.6" rx="104.2" ry="29.5" fill="#000" opacity=".16"/>
+      <circle cx="702.0" cy="424.3" r="98.3" fill="url(#metal)"/>
+      <circle cx="702.0" cy="424.3" r="80.6" fill="url(#curry0)"/>
+      <ellipse cx="680.4" cy="398.8" rx="29.5" ry="15.7" fill="#fff" opacity=".2"/>
+  <ellipse cx="577.5" cy="497.3" rx="25.7" ry="14.0" fill="#3F7C33" opacity=".5" transform="rotate(24 577.5 497.3)"/><ellipse cx="461.3" cy="531.7" rx="25.7" ry="14.0" fill="#3F7C33" opacity=".5" transform="rotate(60 461.3 531.7)"/><ellipse cx="336.6" cy="506.4" rx="25.7" ry="14.0" fill="#3F7C33" opacity=".5" transform="rotate(96 336.6 506.4)"/><ellipse cx="297.3" cy="440.4" rx="25.7" ry="14.0" fill="#3F7C33" opacity=".5" transform="rotate(132 297.3 440.4)"/><ellipse cx="373.0" cy="383.4" rx="25.7" ry="14.0" fill="#3F7C33" opacity=".5" transform="rotate(168 373.0 383.4)"/><ellipse cx="506.7" cy="378.4" rx="25.7" ry="14.0" fill="#3F7C33" opacity=".5" transform="rotate(204 506.7 378.4)"/><ellipse cx="597.7" cy="429.1" rx="25.7" ry="14.0" fill="#3F7C33" opacity=".5" transform="rotate(239 597.7 429.1)"/>
+  <rect width="900" height="780" fill="#2B0B06" opacity=".06"/>
+</svg>

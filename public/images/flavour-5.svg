@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 460" width="640" height="460" role="img" aria-label="Indian sweets">
+  <defs>
+    <linearGradient id="bgg" x1="0" y1="0" x2="640" y2="460" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F7E2BE"/><stop offset=".55" stop-color="#CE8A3A"/><stop offset="1" stop-color="#7E3A12"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.42" r="0.62">
+      <stop stop-color="#fff" stop-opacity=".28"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#EFE3CE"/><stop offset="1" stop-color="#B9A582"/>
+    </linearGradient>
+    <linearGradient id="curry0" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#E9903F"/><stop offset="1" stop-color="#B4471A"/>
+    </linearGradient>
+    <linearGradient id="curry1" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#F2C878"/><stop offset="1" stop-color="#C98A33"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="460" fill="url(#bgg)"/>
+  <rect width="640" height="460" fill="url(#glow)"/>
+  <ellipse cx="320" cy="391.0" rx="332.8" ry="58.0" fill="#000" opacity=".12"/>
+  
+      <ellipse cx="140.8" cy="274.6" rx="61.4" ry="17.4" fill="#000" opacity=".16"/>
+      <circle cx="140.8" cy="250.2" r="58.0" fill="url(#metal)"/>
+      <circle cx="140.8" cy="250.2" r="47.5" fill="url(#curry0)"/>
+      <ellipse cx="128.0" cy="235.2" rx="17.4" ry="9.3" fill="#fff" opacity=".2"/>
+      <ellipse cx="320.0" cy="319.0" rx="76.1" ry="21.5" fill="#000" opacity=".16"/>
+      <circle cx="320.0" cy="288.9" r="71.8" fill="url(#metal)"/>
+      <circle cx="320.0" cy="288.9" r="58.8" fill="url(#curry1)"/>
+      <ellipse cx="304.2" cy="270.2" rx="21.5" ry="11.5" fill="#fff" opacity=".2"/>
+      <ellipse cx="499.2" cy="274.6" rx="61.4" ry="17.4" fill="#000" opacity=".16"/>
+      <circle cx="499.2" cy="250.2" r="58.0" fill="url(#metal)"/>
+      <circle cx="499.2" cy="250.2" r="47.5" fill="url(#curry0)"/>
+      <ellipse cx="486.4" cy="235.2" rx="17.4" ry="9.3" fill="#fff" opacity=".2"/>
+  <ellipse cx="395.2" cy="293.3" rx="15.2" ry="8.3" fill="#3F7C33" opacity=".5" transform="rotate(24 395.2 293.3)"/><ellipse cx="326.7" cy="313.6" rx="15.2" ry="8.3" fill="#3F7C33" opacity=".5" transform="rotate(60 326.7 313.6)"/><ellipse cx="253.1" cy="298.7" rx="15.2" ry="8.3" fill="#3F7C33" opacity=".5" transform="rotate(96 253.1 298.7)"/><ellipse cx="230.0" cy="259.7" rx="15.2" ry="8.3" fill="#3F7C33" opacity=".5" transform="rotate(132 230.0 259.7)"/><ellipse cx="274.6" cy="226.1" rx="15.2" ry="8.3" fill="#3F7C33" opacity=".5" transform="rotate(168 274.6 226.1)"/><ellipse cx="353.4" cy="223.2" rx="15.2" ry="8.3" fill="#3F7C33" opacity=".5" transform="rotate(204 353.4 223.2)"/><ellipse cx="407.1" cy="253.0" rx="15.2" ry="8.3" fill="#3F7C33" opacity=".5" transform="rotate(239 407.1 253.0)"/>
+  <rect width="640" height="460" fill="#2B0B06" opacity=".06"/>
+</svg>
