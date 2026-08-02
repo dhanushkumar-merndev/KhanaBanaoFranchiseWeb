@@ -31,6 +31,7 @@ function FieldError({ id, message }: { id: string; message?: string }) {
 
 export function EnquiryForm() {
   const [leadNumber, setLeadNumber] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
 
   const {
     register,
@@ -51,17 +52,28 @@ export function EnquiryForm() {
       currentOccupation: "",
       existingBusiness: "",
       message: "",
-      website: "",
+      companyWebsiteConfirm: "",
     },
   });
 
   const onSubmit = handleSubmit(async (values) => {
-    const result = await submitEnquiry(values);
+    let result: Awaited<ReturnType<typeof submitEnquiry>>;
+    try {
+      result = await submitEnquiry(values);
+    } catch {
+      toast.error("The enquiry could not be submitted. Please try again.");
+      return;
+    }
 
     if (result.ok) {
       setLeadNumber(result.leadNumber);
+      setEmailSent(result.emailSent);
       reset();
-      toast.success("Enquiry received — we'll call you shortly.");
+      toast.success(
+        result.emailSent
+          ? "Enquiry saved and confirmation email sent."
+          : "Enquiry saved — we'll call you shortly.",
+      );
       return;
     }
 
@@ -104,8 +116,9 @@ export function EnquiryForm() {
                 <strong className="font-semibold text-brand-crimson">
                   {leadNumber}
                 </strong>
-                . One of our franchise advisors will call you shortly. We have
-                also emailed you a confirmation.
+                . One of our franchise advisors will call you shortly. {emailSent
+                  ? "We have also emailed you a confirmation."
+                  : "Your enquiry is saved; if the email is delayed, keep this reference number."}
               </p>
               <div className="mt-7 flex flex-wrap justify-center gap-3">
                 <a
@@ -118,7 +131,10 @@ export function EnquiryForm() {
                 </a>
                 <button
                   type="button"
-                  onClick={() => setLeadNumber(null)}
+                  onClick={() => {
+                    setLeadNumber(null);
+                    setEmailSent(false);
+                  }}
                   className="rounded-full border border-line px-6 py-3 text-sm font-semibold text-ink transition hover:bg-surface-muted"
                 >
                   Send another enquiry
@@ -287,10 +303,19 @@ export function EnquiryForm() {
                 </div>
               </div>
 
-              {/* Honeypot — visually and programmatically hidden from users */}
+              {/* Honeypot — visually and programmatically hidden from users.
+                  The uncommon name plus password-manager hints prevent normal
+                  browser autofill from blocking a genuine submission. */}
               <div aria-hidden="true" className="absolute left-[-9999px]">
-                <label htmlFor="website">Leave this empty</label>
-                <input id="website" tabIndex={-1} autoComplete="off" {...register("website")} />
+                <label htmlFor="companyWebsiteConfirm">Leave this empty</label>
+                <input
+                  id="companyWebsiteConfirm"
+                  tabIndex={-1}
+                  autoComplete="new-password"
+                  data-1p-ignore
+                  data-lpignore="true"
+                  {...register("companyWebsiteConfirm")}
+                />
               </div>
 
               <div className="mt-6">

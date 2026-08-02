@@ -1,6 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
+import { revalidatePath } from "next/cache";
 import { isSupabaseConfigured } from "@/lib/env";
 import { normalizeEmail, normalizePhone, normalizeText } from "@/lib/domain/normalize";
 import { sendTemplateEmail } from "@/lib/email/send";
@@ -53,8 +54,8 @@ export async function submitEnquiry(
   const values = parsed.data;
 
   // Honeypot: silently accept so a bot does not learn it was caught.
-  if (values.website) {
-    return { ok: true, leadNumber: "KB-L00000" };
+  if (values.companyWebsiteConfirm) {
+    return { ok: true, leadNumber: "KB-L00000", emailSent: false };
   }
 
   const headerList = await headers();
@@ -79,12 +80,12 @@ export async function submitEnquiry(
     };
   }
 
-  const supabase = createAdminClient();
-
   const phone = normalizePhone(values.phone);
   const email = normalizeEmail(values.email);
 
   try {
+    const supabase = createAdminClient();
+
     // Returning visitor: keep one lead rather than creating duplicates.
     const { data: existing } = await supabase
       .from("leads")
@@ -94,6 +95,31 @@ export async function submitEnquiry(
       .maybeSingle();
 
     if (existing) {
+      await supabase
+        .from("leads")
+        .update({
+          full_name: normalizeText(values.fullName),
+          city: normalizeText(values.city),
+          consent_given: true,
+          ...(values.whatsapp
+            ? { whatsapp: normalizePhone(values.whatsapp) }
+            : {}),
+          ...(values.preferredTerritory
+            ? { preferred_territory: normalizeText(values.preferredTerritory) }
+            : {}),
+          ...(values.investmentRange
+            ? { investment_range: values.investmentRange }
+            : {}),
+          ...(values.currentOccupation
+            ? { current_occupation: normalizeText(values.currentOccupation) }
+            : {}),
+          ...(values.existingBusiness
+            ? { existing_business: normalizeText(values.existingBusiness) }
+            : {}),
+          ...(values.message ? { message: values.message } : {}),
+        })
+        .eq("id", existing.id);
+
       await supabase.from("lead_activities").insert({
         lead_id: existing.id,
         member_id: null,
@@ -104,7 +130,26 @@ export async function submitEnquiry(
           : "Repeat website enquiry received.",
       });
 
-      return { ok: true, leadNumber: existing.lead_number };
+      const emailResult = await sendTemplateEmail({
+        templateKey: "ENQUIRY_RECEIVED",
+        to: { email, name: normalizeText(values.fullName) },
+        vars: {
+          applicant_name: normalizeText(values.fullName),
+          lead_number: existing.lead_number,
+        },
+        leadId: existing.id,
+      });
+
+      revalidatePath("/admin");
+      revalidatePath("/admin/leads");
+      revalidatePath("/member");
+      revalidatePath("/member/leads");
+
+      return {
+        ok: true,
+        leadNumber: existing.lead_number,
+        emailSent: emailResult.status === "SENT",
+      };
     }
 
     const { data: lead, error } = await supabase
@@ -157,14 +202,23 @@ export async function submitEnquiry(
     });
 
     // Fire-and-log: a mail failure must not fail the enquiry.
-    await sendTemplateEmail({
+    const emailResult = await sendTemplateEmail({
       templateKey: "ENQUIRY_RECEIVED",
       to: { email: lead.email, name: lead.full_name },
       vars: { applicant_name: lead.full_name, lead_number: lead.lead_number },
       leadId: lead.id,
     });
 
-    return { ok: true, leadNumber: lead.lead_number };
+    revalidatePath("/admin");
+    revalidatePath("/admin/leads");
+    revalidatePath("/member");
+    revalidatePath("/member/leads");
+
+    return {
+      ok: true,
+      leadNumber: lead.lead_number,
+      emailSent: emailResult.status === "SENT",
+    };
   } catch (cause) {
     console.error("[enquiry] submission failed", cause);
     return {

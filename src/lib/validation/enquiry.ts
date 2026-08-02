@@ -51,13 +51,14 @@ export const enquirySchema = z.object({
   consent: z.literal(true, {
     message: "Please agree to be contacted so we can respond to your enquiry",
   }),
-  // Honeypot — real users never fill this; bots usually do.
-  website: z.string().max(0).optional(),
+  // Server-checked honeypot. It deliberately accepts text in validation so a
+  // password manager cannot make the visible form fail silently.
+  companyWebsiteConfirm: z.string().trim().max(200).optional(),
 });
 
 export type EnquiryInput = z.input<typeof enquirySchema>;
 export type EnquiryValues = z.output<typeof enquirySchema>;
 
 export type EnquiryResult =
-  | { ok: true; leadNumber: string }
+  | { ok: true; leadNumber: string; emailSent: boolean }
   | { ok: false; message: string; fieldErrors?: Record<string, string> };
