@@ -108,6 +108,27 @@
 }
 
 /* ------------------------------------------------------------------
+   Desktop zoom
+
+   A page cannot drive the browser's own zoom control, so this scales the
+   layout instead. `zoom` multiplies every used value the way browser zoom
+   does, and it composes with whatever zoom the visitor has already chosen
+   rather than fighting it.
+
+   Only from 1440px up. `zoom` shrinks the *effective* viewport — 1440
+   physical becomes 1152 layout px — while media queries keep evaluating
+   against the physical width. Zooming a narrower window would therefore fire
+   the desktop breakpoints with less room than they were designed for, so the
+   threshold is set where 1.25x still leaves a comfortable desktop canvas.
+------------------------------------------------------------------ */
+
+@media (min-width: 1440px) {
+  :root {
+    zoom: 1.25;
+  }
+}
+
+/* ------------------------------------------------------------------
    Scroll reveal — driven by IntersectionObserver adding [data-revealed]
 ------------------------------------------------------------------ */
 
