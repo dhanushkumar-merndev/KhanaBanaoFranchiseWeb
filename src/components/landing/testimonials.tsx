@@ -14,9 +14,13 @@ export function Testimonials() {
         speed={0.07}
         opacity={0.55}
       />
+      {/* Mirrored, so the two branches lean away from the cards rather than
+          both leaning the same way. `flip` alone — adding flipY and rotate
+          180 as well would compose back to the identity and render a plain
+          copy of the left one. */}
       <Leaf
         src="/decor/floral-corner.svg"
-        className="-right-10 top-16 w-40 md:w-64"
+        className="-right-10 top-8 w-40 md:w-64"
         speed={-0.07}
         opacity={0.55}
         flip
