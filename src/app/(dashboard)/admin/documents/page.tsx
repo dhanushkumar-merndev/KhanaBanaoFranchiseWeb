@@ -23,7 +23,7 @@ export default async function AdminDocumentsPage({
       <main className="min-w-0 flex-1 px-4 py-6 md:px-6">
         <PageHeader
           title="Documents"
-          description="Every uploaded document across all applicants. Approving or requesting a re-upload happens on the lead's Documents tab."
+          description="One row per applicant, showing all requested documents and their combined progress. Open the lead to review individual files."
         />
         <DocumentsQueueTable
           rows={rows}

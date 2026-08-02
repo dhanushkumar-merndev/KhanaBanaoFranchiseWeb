@@ -13,7 +13,9 @@ import {
 import { toast } from "sonner";
 import {
   approvePayment,
+  discardPaymentProofUpload,
   getPaymentProofUrl,
+  preparePaymentProofUpload,
   recordPayment,
   rejectPayment,
 } from "@/app/actions/payments";
@@ -35,6 +37,9 @@ import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import {
   PAYMENT_MODES,
   PAYMENT_MODE_LABELS,
+  LEAD_STATUS_LABELS,
+  STORAGE_BUCKETS,
+  type AgreementStatus,
   type LeadStatus,
 } from "@/lib/domain/enums";
 import { PAYMENT_STATUS_LABELS, paymentStatusTone } from "@/lib/domain/status";
@@ -42,16 +47,19 @@ import { formatDate, formatDateTime } from "@/lib/format";
 import { franchiseFee } from "@/lib/site";
 import { formatCurrency } from "@/lib/utils";
 import type { PaymentDetail } from "@/lib/data/pipeline";
+import { createClient } from "@/lib/supabase/client";
 
 export function PaymentTab({
   leadId,
   leadStatus,
+  agreementStatus,
   payments,
   canRecord,
   isAdmin,
 }: {
   leadId: string;
   leadStatus: LeadStatus;
+  agreementStatus: AgreementStatus | null;
   payments: PaymentDetail[];
   canRecord: boolean;
   isAdmin: boolean;
@@ -64,10 +72,11 @@ export function PaymentTab({
   // Recording is only meaningful once the agreement is done and before the fee
   // has been accepted.
   const stageAllows =
-    leadStatus === "AGREEMENT_COMPLETED" ||
-    leadStatus === "PAYMENT_PENDING" ||
-    leadStatus === "PAYMENT_PROOF_SUBMITTED" ||
-    leadStatus === "PAYMENT_REJECTED";
+    agreementStatus === "COMPLETED" &&
+    (leadStatus === "AGREEMENT_COMPLETED" ||
+      leadStatus === "PAYMENT_PENDING" ||
+      leadStatus === "PAYMENT_PROOF_SUBMITTED" ||
+      leadStatus === "PAYMENT_REJECTED");
 
   const recordButton = canRecord && stageAllows && !approved && (
     <Button size="sm" onClick={() => setRecordOpen(true)}>
@@ -84,7 +93,11 @@ export function PaymentTab({
           body={
             stageAllows
               ? `The one-time franchise fee is ₹${franchiseFee.display}. Record it here with proof of transfer.`
-              : "The franchise fee is recorded once the agreement is completed."
+              : agreementStatus === "COMPLETED"
+                ? leadStatus === "DOCUMENTS_APPROVED"
+                  ? "Documents are approved. Open the Application tab and approve the franchise territory and model to unlock Payment."
+                  : `The agreement is complete, but this lead is still at ${LEAD_STATUS_LABELS[leadStatus].toLowerCase()}. Finish the earlier approval gates to open Payment.`
+                : "The franchise fee is recorded once the agreement is completed."
           }
           icon={BadgeIndianRupee}
           action={recordButton || undefined}
@@ -303,10 +316,49 @@ function RecordDialog({
     event.preventDefault();
     setPending(true);
     setErrors({});
+    let uploadReceipt: string | null = null;
     try {
       const formData = new FormData(event.currentTarget);
+      const proof = formData.get("proof");
+      formData.delete("proof");
+
+      if (proof instanceof File && proof.size > 0) {
+        const prepared = await preparePaymentProofUpload(leadId, {
+          fileName: proof.name,
+          fileSize: proof.size,
+          mimeType: proof.type,
+        });
+        if (!prepared.ok) {
+          setErrors(prepared.fieldErrors ?? {});
+          toast.error(prepared.message);
+          return;
+        }
+
+        uploadReceipt = prepared.data.receipt;
+        const { error } = await createClient().storage
+          .from(STORAGE_BUCKETS.paymentProofs)
+          .uploadToSignedUrl(
+            prepared.data.path,
+            prepared.data.uploadToken,
+            proof,
+            { cacheControl: "3600", contentType: proof.type },
+          );
+        if (error) {
+          await discardPaymentProofUpload(leadId, uploadReceipt);
+          uploadReceipt = null;
+          setErrors({ proof: "Upload the proof again" });
+          toast.error(`The payment proof could not be uploaded: ${error.message}`);
+          return;
+        }
+        formData.set("proofReceipt", uploadReceipt);
+      }
+
       const result = await recordPayment(leadId, formData);
       if (!result.ok) {
+        if (uploadReceipt) {
+          await discardPaymentProofUpload(leadId, uploadReceipt);
+          uploadReceipt = null;
+        }
         setErrors(result.fieldErrors ?? {});
         toast.error(result.message);
         return;
@@ -318,6 +370,13 @@ function RecordDialog({
       );
       router.refresh();
       onClose();
+    } catch (error) {
+      if (uploadReceipt) {
+        await discardPaymentProofUpload(leadId, uploadReceipt);
+      }
+      toast.error(
+        error instanceof Error ? error.message : "The payment could not be saved.",
+      );
     } finally {
       setPending(false);
     }

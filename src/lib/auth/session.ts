@@ -10,7 +10,9 @@ import type { ProfileRow } from "@/lib/supabase/types";
 export type SessionProfile = Pick<
   ProfileRow,
   "id" | "full_name" | "email" | "phone" | "role" | "status"
->;
+> & {
+  avatar_url?: string | null;
+};
 
 /**
  * The signed-in staff profile, or null.
@@ -36,7 +38,15 @@ export const getSessionProfile = cache(
 
     if (!profile || profile.status !== "ACTIVE") return null;
 
-    return profile;
+    const avatar_url =
+      (user.user_metadata?.avatar_url as string | undefined) ??
+      (user.user_metadata?.picture as string | undefined) ??
+      null;
+
+    return {
+      ...profile,
+      avatar_url,
+    };
   },
 );
 

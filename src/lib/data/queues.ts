@@ -106,11 +106,12 @@ export async function listApplications(
 
 export type DocumentQueueRow = {
   id: string;
-  documentType: DocumentType;
-  fileName: string;
-  version: number;
+  documentTypes: DocumentType[];
+  requestedCount: number;
+  uploadedCount: number;
+  approvedCount: number;
   status: DocumentStatus;
-  uploadedAt: string;
+  uploadedAt: string | null;
   reviewedByName: string | null;
   leadId: string;
   leadNumber: string;
@@ -126,79 +127,121 @@ export async function listDocuments(
   const { from, to } = toRange(params);
   const allowed = await scopedLeadIds(scopeMemberId);
 
-  // documents -> applications -> leads, so a member scope needs the
-  // application ids that belong to their leads.
-  let applicationIds: string[] | null = null;
+  let applicationQuery = supabase.from("applications").select("id, lead_id");
   if (allowed) {
-    const { data } = await supabase
-      .from("applications")
-      .select("id")
-      .in("lead_id", allowed.length ? allowed : ["-"]);
-    applicationIds = (data ?? []).map((row) => row.id);
-  }
-
-  let query = supabase
-    .from("documents")
-    .select(
-      "id, document_type, file_name, version, status, uploaded_at, reviewed_by, application_id",
-      { count: "exact" },
+    applicationQuery = applicationQuery.in(
+      "lead_id",
+      allowed.length ? allowed : ["-"],
     );
-
-  if (applicationIds) {
-    query = query.in("application_id", applicationIds.length ? applicationIds : ["-"]);
   }
+  const { data: applications } = await applicationQuery.limit(5000);
+  const applicationIds = (applications ?? []).map((row) => row.id);
+  if (applicationIds.length === 0) return { rows: [], total: 0 };
 
-  const status = pickEnum(params.filters.status, DOCUMENT_STATUSES);
-  if (status) query = query.eq("status", status);
+  // The queue is intentionally based on request rows, then rolled up by lead.
+  // Adding PAN after Aadhaar therefore updates the same applicant row instead
+  // of creating another top-level queue row.
+  const { data: requests } = await supabase
+    .from("document_requests")
+    .select("id, application_id, document_type, status")
+    .in("application_id", applicationIds)
+    .limit(5000);
 
-  const { data, count } = await query
-    .order("uploaded_at", { ascending: params.dir === "asc" })
-    .range(from, to);
+  const requestRows = requests ?? [];
+  if (requestRows.length === 0) return { rows: [], total: 0 };
 
-  const documents = data ?? [];
+  const requestIds = requestRows.map((request) => request.id);
+  const { data: documents } = await supabase
+    .from("documents")
+    .select("document_request_id, uploaded_at, reviewed_by, version")
+    .in("document_request_id", requestIds)
+    .order("version", { ascending: false })
+    .limit(5000);
 
-  const { data: applications } = documents.length
-    ? await supabase
-        .from("applications")
-        .select("id, lead_id")
-        .in(
-          "id",
-          documents.map((document) => document.application_id),
-        )
-    : { data: [] };
+  const latestByRequest = new Map<
+    string,
+    { uploaded_at: string; reviewed_by: string | null; version: number }
+  >();
+  for (const document of documents ?? []) {
+    if (!latestByRequest.has(document.document_request_id)) {
+      latestByRequest.set(document.document_request_id, document);
+    }
+  }
 
   const leadByApplication = new Map(
     (applications ?? []).map((row) => [row.id, row.lead_id] as const),
   );
   const leads = await loadLeads([...leadByApplication.values()]);
   const reviewerNames = await resolveMemberNames(
-    documents.map((document) => document.reviewed_by),
+    [...latestByRequest.values()].map((document) => document.reviewed_by),
   );
 
+  const requestsByLead = new Map<string, typeof requestRows>();
+  for (const request of requestRows) {
+    const leadId = leadByApplication.get(request.application_id);
+    if (!leadId) continue;
+    const grouped = requestsByLead.get(leadId) ?? [];
+    grouped.push(request);
+    requestsByLead.set(leadId, grouped);
+  }
+
+  const aggregateStatus = (statuses: DocumentStatus[]): DocumentStatus => {
+    if (statuses.includes("REUPLOAD_REQUIRED")) return "REUPLOAD_REQUIRED";
+    if (statuses.every((value) => value === "APPROVED")) return "APPROVED";
+    if (statuses.includes("UNDER_REVIEW")) return "UNDER_REVIEW";
+    if (statuses.includes("UPLOADED") || statuses.includes("APPROVED")) {
+      return "UPLOADED";
+    }
+    return "REQUESTED";
+  };
+
+  let groupedRows: DocumentQueueRow[] = [];
+  for (const [leadId, leadRequests] of requestsByLead) {
+    const lead = leads.get(leadId);
+    if (!lead) continue;
+
+    const latestDocuments = leadRequests.flatMap((request) => {
+      const document = latestByRequest.get(request.id);
+      return document ? [document] : [];
+    });
+    const latestDocument = latestDocuments.sort((a, b) =>
+      b.uploaded_at.localeCompare(a.uploaded_at),
+    )[0];
+    const statuses = leadRequests.map(
+      (request) => request.status as DocumentStatus,
+    );
+
+    groupedRows.push({
+      id: lead.id,
+      leadId: lead.id,
+      leadNumber: lead.lead_number,
+      leadName: lead.full_name,
+      assignedMemberName: lead.memberName,
+      documentTypes: [
+        ...new Set(leadRequests.map((request) => request.document_type)),
+      ],
+      requestedCount: leadRequests.length,
+      uploadedCount: statuses.filter((value) => value !== "REQUESTED").length,
+      approvedCount: statuses.filter((value) => value === "APPROVED").length,
+      status: aggregateStatus(statuses),
+      uploadedAt: latestDocument?.uploaded_at ?? null,
+      reviewedByName: latestDocument?.reviewed_by
+        ? (reviewerNames.get(latestDocument.reviewed_by) ?? null)
+        : null,
+    });
+  }
+
+  const status = pickEnum(params.filters.status, DOCUMENT_STATUSES);
+  if (status) groupedRows = groupedRows.filter((row) => row.status === status);
+
+  groupedRows.sort((a, b) => {
+    const comparison = (a.uploadedAt ?? "").localeCompare(b.uploadedAt ?? "");
+    return params.dir === "asc" ? comparison : -comparison;
+  });
+
   return {
-    total: count ?? 0,
-    rows: documents.flatMap((document) => {
-      const leadId = leadByApplication.get(document.application_id);
-      const lead = leadId ? leads.get(leadId) : undefined;
-      if (!lead) return [];
-      return [
-        {
-          id: document.id,
-          documentType: document.document_type,
-          fileName: document.file_name,
-          version: document.version,
-          status: document.status,
-          uploadedAt: document.uploaded_at,
-          reviewedByName: document.reviewed_by
-            ? (reviewerNames.get(document.reviewed_by) ?? null)
-            : null,
-          leadId: lead.id,
-          leadNumber: lead.lead_number,
-          leadName: lead.full_name,
-          assignedMemberName: lead.memberName,
-        },
-      ];
-    }),
+    total: groupedRows.length,
+    rows: groupedRows.slice(from, to + 1),
   };
 }
 

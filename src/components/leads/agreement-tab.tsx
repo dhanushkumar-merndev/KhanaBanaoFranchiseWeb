@@ -4,7 +4,13 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Download, ExternalLink, FileSignature, Upload } from "lucide-react";
 import { toast } from "sonner";
-import { advanceAgreement, getAgreementUrl, uploadAgreement } from "@/app/actions/agreements";
+import {
+  advanceAgreement,
+  discardAgreementUpload,
+  getAgreementUrl,
+  prepareAgreementUpload,
+  uploadAgreement,
+} from "@/app/actions/agreements";
 import { StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,9 +19,16 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/feedback";
 import { Field, Textarea } from "@/components/ui/field";
 import { AGREEMENT_STATUS_LABELS, agreementStatusTone } from "@/lib/domain/status";
-import { AGREEMENT_STATUSES, type AgreementStatus } from "@/lib/domain/enums";
+import {
+  AGREEMENT_STATUSES,
+  LEAD_STATUSES,
+  STORAGE_BUCKETS,
+  type AgreementStatus,
+  type LeadStatus,
+} from "@/lib/domain/enums";
 import { formatDateTime } from "@/lib/format";
 import type { AgreementDetail } from "@/lib/data/pipeline";
+import { createClient } from "@/lib/supabase/client";
 
 /** The stage after the current one — agreements only ever move forward. */
 function nextStatus(current: AgreementStatus): AgreementStatus | null {
@@ -36,10 +49,12 @@ const ADVANCE_LABEL: Record<AgreementStatus, string> = {
 
 export function AgreementTab({
   leadId,
+  leadStatus,
   agreement,
   isAdmin,
 }: {
   leadId: string;
+  leadStatus: LeadStatus;
   agreement: AgreementDetail | null;
   isAdmin: boolean;
 }) {
@@ -48,6 +63,11 @@ export function AgreementTab({
   const [opening, setOpening] = useState<"view" | "download" | null>(null);
 
   const target = agreement ? nextStatus(agreement.status) : null;
+  const canManageAgreement =
+    isAdmin &&
+    leadStatus !== "REJECTED" &&
+    LEAD_STATUSES.indexOf(leadStatus) >=
+      LEAD_STATUSES.indexOf("FRANCHISE_APPROVED");
 
   const openFile = async (download: boolean) => {
     if (!agreement) return;
@@ -66,12 +86,14 @@ export function AgreementTab({
       <EmptyState
         title="No agreement yet"
         body={
-          isAdmin
+          canManageAgreement
             ? "Upload the franchise agreement PDF to start the signing sequence."
-            : "An administrator uploads the agreement once the franchise is approved."
+            : "The agreement opens after document review and franchise approval."
         }
         icon={FileSignature}
-        action={isAdmin ? <UploadAgreementButton leadId={leadId} /> : undefined}
+        action={
+          canManageAgreement ? <UploadAgreementButton leadId={leadId} /> : undefined
+        }
       />
     );
   }
@@ -118,8 +140,8 @@ export function AgreementTab({
                 </Button>
               </>
             )}
-            {isAdmin && <UploadAgreementButton leadId={leadId} replace />}
-            {isAdmin && target && (
+            {canManageAgreement && <UploadAgreementButton leadId={leadId} replace />}
+            {canManageAgreement && target && (
               <Button size="sm" onClick={() => setAdvanceOpen(true)}>
                 {ADVANCE_LABEL[agreement.status]}
               </Button>
@@ -296,12 +318,51 @@ function UploadAgreementButton({
           confirmLabel="Upload"
           successMessage="Agreement uploaded."
           onConfirm={async () => {
-            const formData = new FormData();
-            formData.set("file", file);
-            formData.set("notes", notes);
-            const result = await uploadAgreement(leadId, formData);
-            if (result.ok) router.refresh();
-            return result;
+            const prepared = await prepareAgreementUpload(leadId, {
+              fileName: file.name,
+              fileSize: file.size,
+              mimeType: file.type,
+            });
+            if (!prepared.ok) return prepared;
+
+            try {
+              const { error } = await createClient().storage
+                .from(STORAGE_BUCKETS.agreements)
+                .uploadToSignedUrl(
+                  prepared.data.path,
+                  prepared.data.uploadToken,
+                  file,
+                  { cacheControl: "3600", contentType: file.type },
+                );
+              if (error) {
+                await discardAgreementUpload(leadId, prepared.data.receipt);
+                return {
+                  ok: false,
+                  message: `The agreement could not be uploaded: ${error.message}`,
+                };
+              }
+
+              const result = await uploadAgreement(
+                leadId,
+                prepared.data.receipt,
+                notes,
+              );
+              if (!result.ok) {
+                await discardAgreementUpload(leadId, prepared.data.receipt);
+                return result;
+              }
+              router.refresh();
+              return result;
+            } catch (error) {
+              await discardAgreementUpload(leadId, prepared.data.receipt);
+              return {
+                ok: false,
+                message:
+                  error instanceof Error
+                    ? error.message
+                    : "The agreement could not be uploaded.",
+              };
+            }
           }}
         >
           <div className="space-y-3">

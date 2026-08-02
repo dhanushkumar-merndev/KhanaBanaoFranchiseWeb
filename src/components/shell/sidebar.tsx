@@ -59,7 +59,7 @@ export function Sidebar({ role }: { role: Role }) {
 
   const nav = (
     <nav
-      className="scrollbar-pill flex flex-1 flex-col gap-6 overflow-y-auto px-3 py-5"
+      className="no-scrollbar flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto overscroll-y-contain px-3 py-5"
       aria-label="Dashboard"
     >
       {groups.map((group) => (

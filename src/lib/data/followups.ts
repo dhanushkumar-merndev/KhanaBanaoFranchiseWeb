@@ -37,6 +37,17 @@ export type FollowupQueueRow = {
   isOverdue: boolean;
 };
 
+type FollowupRecord = {
+  id: string;
+  due_at: string;
+  status: FollowupStatus;
+  channel: ContactChannel | null;
+  note: string | null;
+  completed_at: string | null;
+  lead_id: string;
+  member_id: string | null;
+};
+
 /**
  * Start and end of "today" in IST, as instants.
  *
@@ -56,6 +67,86 @@ function istDayBounds(now = new Date()) {
     end: new Date(startOfIstDay + 24 * 60 * 60_000 - IST_OFFSET_MS).toISOString(),
     now: now.toISOString(),
   };
+}
+
+export function normalizeFollowupMonth(value: string | string[] | undefined, now = new Date()) {
+  const candidate = Array.isArray(value) ? value[0] : value;
+  if (/^\d{4}-(0[1-9]|1[0-2])$/.test(candidate ?? "")) return candidate as string;
+
+  const IST_OFFSET_MS = 5.5 * 60 * 60_000;
+  const istNow = new Date(now.getTime() + IST_OFFSET_MS);
+  return `${istNow.getUTCFullYear()}-${String(istNow.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+function istMonthBounds(month: string) {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const IST_OFFSET_MS = 5.5 * 60 * 60_000;
+  return {
+    start: new Date(Date.UTC(year, monthNumber - 1, 1) - IST_OFFSET_MS).toISOString(),
+    end: new Date(Date.UTC(year, monthNumber, 1) - IST_OFFSET_MS).toISOString(),
+    now: new Date().toISOString(),
+  };
+}
+
+async function enrichFollowups(
+  followups: FollowupRecord[],
+  now: string,
+): Promise<FollowupQueueRow[]> {
+  const supabase = createAdminClient();
+  const leadIds = [...new Set(followups.map((followup) => followup.lead_id))];
+  const { data: leads } = leadIds.length
+    ? await supabase
+        .from("leads")
+        .select("id, lead_number, full_name, phone, current_status")
+        .in("id", leadIds)
+    : { data: [] };
+
+  const leadMap = new Map((leads ?? []).map((lead) => [lead.id, lead] as const));
+  const memberNames = await resolveMemberNames(followups.map((followup) => followup.member_id));
+
+  return followups.flatMap((followup) => {
+    const lead = leadMap.get(followup.lead_id);
+    if (!lead) return [];
+    return [
+      {
+        id: followup.id,
+        due_at: followup.due_at,
+        status: followup.status,
+        channel: followup.channel,
+        note: followup.note,
+        completed_at: followup.completed_at,
+        lead_id: followup.lead_id,
+        leadNumber: lead.lead_number,
+        leadName: lead.full_name,
+        leadPhone: lead.phone,
+        leadStatus: lead.current_status,
+        memberName: followup.member_id
+          ? (memberNames.get(followup.member_id) ?? null)
+          : null,
+        isOverdue: followup.status === "PENDING" && followup.due_at < now,
+      },
+    ];
+  });
+}
+
+/** All follow-ups scheduled in one IST calendar month. */
+export async function listFollowupsForMonth(
+  month: string,
+  scopeMemberId: string | null,
+): Promise<FollowupQueueRow[]> {
+  const supabase = createAdminClient();
+  const bounds = istMonthBounds(month);
+  let query = supabase
+    .from("followups")
+    .select("id, due_at, status, channel, note, completed_at, lead_id, member_id")
+    .gte("due_at", bounds.start)
+    .lt("due_at", bounds.end)
+    .order("due_at", { ascending: true })
+    .limit(500);
+
+  if (scopeMemberId) query = query.eq("member_id", scopeMemberId);
+  const { data } = await query;
+  return enrichFollowups((data ?? []) as FollowupRecord[], bounds.now);
 }
 
 const SORTABLE = new Set(["due_at", "status", "completed_at"]);
@@ -115,18 +206,7 @@ export async function listFollowups(
     })
     .range(from, to);
 
-  const followups = data ?? [];
-
-  const leadIds = [...new Set(followups.map((f) => f.lead_id))];
-  const { data: leads } = leadIds.length
-    ? await supabase
-        .from("leads")
-        .select("id, lead_number, full_name, phone, current_status")
-        .in("id", leadIds)
-    : { data: [] };
-
-  const leadMap = new Map((leads ?? []).map((lead) => [lead.id, lead] as const));
-  const memberNames = await resolveMemberNames(followups.map((f) => f.member_id));
+  const followups = (data ?? []) as FollowupRecord[];
 
   // Tab chips need every view's size, not just the open one.
   const counts = {} as Record<FollowupView, number>;
@@ -149,29 +229,6 @@ export async function listFollowups(
   return {
     total: count ?? 0,
     counts,
-    rows: followups.flatMap((followup) => {
-      const lead = leadMap.get(followup.lead_id);
-      if (!lead) return [];
-      return [
-        {
-          id: followup.id,
-          due_at: followup.due_at,
-          status: followup.status,
-          channel: followup.channel,
-          note: followup.note,
-          completed_at: followup.completed_at,
-          lead_id: followup.lead_id,
-          leadNumber: lead.lead_number,
-          leadName: lead.full_name,
-          leadPhone: lead.phone,
-          leadStatus: lead.current_status,
-          memberName: followup.member_id
-            ? (memberNames.get(followup.member_id) ?? null)
-            : null,
-          isOverdue:
-            followup.status === "PENDING" && followup.due_at < bounds.now,
-        },
-      ];
-    }),
+    rows: await enrichFollowups(followups, bounds.now),
   };
 }

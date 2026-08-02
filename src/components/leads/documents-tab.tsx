@@ -357,7 +357,7 @@ function DocumentCard({
                 rows={3}
                 value={reason}
                 onChange={(event) => setReason(event.target.value)}
-                placeholder="e.g. The PAN card image is cut off — please re-scan the full card."
+                placeholder={`e.g. The ${DOCUMENT_TYPE_LABELS[row.documentType]} image is cut off — please re-scan the full document.`}
               />
             </Field>
           </EmailConfirmDialog>
@@ -540,7 +540,7 @@ function RequestDialog({
           </Field>
         </DialogBody>
 
-        <DialogFooter>
+        <DialogFooter className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <Button type="button" variant="outline" onClick={onClose} disabled={busy}>
             Cancel
           </Button>
@@ -555,6 +555,7 @@ function RequestDialog({
           </Button>
           <Button
             type="button"
+            className="sm:col-span-2"
             loading={pending === "email"}
             disabled={busy || selected.size === 0}
             onClick={() => void submit(true)}

@@ -26,7 +26,7 @@ export default async function MemberDocumentsPage({
       <main className="min-w-0 flex-1 px-4 py-6 md:px-6">
         <PageHeader
           title="Documents"
-          description="Documents your applicants have uploaded. Approval is an administrator's decision, but you can chase what is missing."
+          description="One row per applicant, showing all requested documents and their combined progress."
         />
         <DocumentsQueueTable
           rows={rows}

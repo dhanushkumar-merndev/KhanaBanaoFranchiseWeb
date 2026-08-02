@@ -108,23 +108,19 @@
 }
 
 /* ------------------------------------------------------------------
-   Desktop zoom
+   Desktop scale
 
-   A page cannot drive the browser's own zoom control, so this scales the
-   layout instead. `zoom` multiplies every used value the way browser zoom
-   does, and it composes with whatever zoom the visitor has already chosen
-   rather than fighting it.
+   A larger root font size scales Tailwind's rem-based layout and type without
+   changing the coordinate system used by portalled overlays. CSS `zoom`
+   cannot be used here because it positions Radix dropdowns off-screen.
 
-   Only from 1440px up. `zoom` shrinks the *effective* viewport — 1440
-   physical becomes 1152 layout px — while media queries keep evaluating
-   against the physical width. Zooming a narrower window would therefore fire
-   the desktop breakpoints with less room than they were designed for, so the
-   threshold is set where 1.25x still leaves a comfortable desktop canvas.
+   The larger scale starts at 1440px, where the dashboard still has enough
+   room for its desktop layout.
 ------------------------------------------------------------------ */
 
 @media (min-width: 1440px) {
   :root {
-    zoom: 1.25;
+    font-size: 125%;
   }
 }
 
@@ -208,10 +204,11 @@
     display: none;
   }
 
-  /* Red pill scrollbar — dashboard sidebar.
+  /* Red pill scrollbar — the browser scrollbar and opt-in containers.
 
      Firefox implements only the two standard properties, so that is all it
      gets: a thin crimson thumb, no pill. */
+  html,
   .scrollbar-pill {
     scrollbar-width: thin;
     scrollbar-color: var(--color-brand-crimson) transparent;
@@ -225,16 +222,20 @@
      styled bar comes back. Firefox does not recognise the selector, so it
      never enters this block and keeps the rule above. */
   @supports selector(::-webkit-scrollbar) {
+    html,
     .scrollbar-pill {
       scrollbar-width: auto;
       scrollbar-color: auto;
     }
 
+    html::-webkit-scrollbar,
     .scrollbar-pill::-webkit-scrollbar {
       width: 10px;
       height: 10px;
     }
 
+    html::-webkit-scrollbar-track,
+    html::-webkit-scrollbar-corner,
     .scrollbar-pill::-webkit-scrollbar-track,
     .scrollbar-pill::-webkit-scrollbar-corner {
       background: transparent;
@@ -242,6 +243,7 @@
 
     /* ::-webkit-scrollbar-thumb ignores margin and padding, so a transparent
        border plus background-clip is the only way to inset the pill. */
+    html::-webkit-scrollbar-thumb,
     .scrollbar-pill::-webkit-scrollbar-thumb {
       background-color: color-mix(
         in srgb,
@@ -253,6 +255,7 @@
       border-radius: 9999px;
     }
 
+    html::-webkit-scrollbar-thumb:hover,
     .scrollbar-pill::-webkit-scrollbar-thumb:hover {
       background-color: var(--color-brand-crimson);
     }

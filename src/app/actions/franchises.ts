@@ -189,6 +189,58 @@ export async function approveFranchise(
     territory_discussed: territory,
   });
 
+  // Older builds allowed an agreement to be completed before the approval
+  // gates. Once those gates are genuinely satisfied, reconcile that existing
+  // evidence through the normal lead stages and open Payment automatically.
+  const { data: completedAgreement } = await supabase
+    .from("agreements")
+    .select("agreement_number")
+    .eq("lead_id", leadId)
+    .eq("status", "COMPLETED")
+    .order("version", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (completedAgreement) {
+    const stages: { from: LeadStatus; to: LeadStatus; notes: string }[] = [
+      {
+        from: "FRANCHISE_APPROVED",
+        to: "AGREEMENT_PENDING",
+        notes: `Existing agreement ${completedAgreement.agreement_number} detected.`,
+      },
+      {
+        from: "AGREEMENT_PENDING",
+        to: "AGREEMENT_SENT",
+        notes: `Agreement ${completedAgreement.agreement_number} was already sent.`,
+      },
+      {
+        from: "AGREEMENT_SENT",
+        to: "AGREEMENT_COMPLETED",
+        notes: `Agreement ${completedAgreement.agreement_number} was already completed.`,
+      },
+      {
+        from: "AGREEMENT_COMPLETED",
+        to: "PAYMENT_PENDING",
+        notes: "Awaiting the franchise fee.",
+      },
+    ];
+
+    await supabase
+      .from("leads")
+      .update({ current_status: "PAYMENT_PENDING" })
+      .eq("id", leadId);
+    await supabase.from("lead_activities").insert(
+      stages.map((stage) => ({
+        lead_id: leadId,
+        member_id: profile.id,
+        activity_type: "STATUS_CHANGE" as const,
+        previous_status: stage.from,
+        new_status: stage.to,
+        notes: stage.notes,
+      })),
+    );
+  }
+
   if (sendEmail) {
     await sendTemplateEmail({
       templateKey: "APPLICATION_APPROVED",

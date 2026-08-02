@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CheckCircle2 } from "lucide-react";
-import { toast } from "sonner";
+import { CheckCircle2, TriangleAlert } from "lucide-react";
 import { submitApplication } from "@/app/actions/applications";
 import { Button } from "@/components/ui/button";
 import { Checkbox, Field, Input, Label, Select, Textarea } from "@/components/ui/field";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   applicationSchema,
   type ApplicationInput,
@@ -69,6 +69,7 @@ export function ApplicationForm({
     applicationNumber: string;
     submittedAt: string;
   } | null>(null);
+  const [reviewValues, setReviewValues] = useState<ApplicationInput | null>(null);
 
   const {
     register,
@@ -106,13 +107,19 @@ export function ApplicationForm({
     },
   });
 
-  const onSubmit = handleSubmit(async (values) => {
-    const result = await submitApplication(token, values);
+  const onSubmit = handleSubmit((values) => setReviewValues(values));
+
+  const confirmSubmit = async () => {
+    if (!reviewValues) {
+      return { ok: false, message: "Review the application before submitting." };
+    }
+
+    const result = await submitApplication(token, reviewValues);
 
     if (result.ok) {
       setSubmitted(result.data);
       window.scrollTo({ top: 0, behavior: "smooth" });
-      return;
+      return { ok: true };
     }
 
     if (result.fieldErrors) {
@@ -120,8 +127,9 @@ export function ApplicationForm({
         setError(field as keyof ApplicationInput, { type: "server", message });
       }
     }
-    toast.error(result.message);
-  });
+    setReviewValues(null);
+    return result;
+  };
 
   if (submitted) {
     return (
@@ -135,14 +143,15 @@ export function ApplicationForm({
   const errorCount = Object.keys(errors).length;
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4" noValidate>
+    <>
+      <form onSubmit={onSubmit} className="space-y-4" noValidate>
       <Section
         step={1}
         title="Personal information"
         description="As it appears on your ID documents."
       >
         <Field label="Full name" htmlFor="a-name" required error={errors.fullName?.message}>
-          <Input id="a-name" autoComplete="name" aria-invalid={Boolean(errors.fullName)} {...register("fullName")} />
+          <Input id="a-name" placeholder="e.g. Ramesh Iyer" autoComplete="name" aria-invalid={Boolean(errors.fullName)} {...register("fullName")} />
         </Field>
 
         <Field label="Date of birth" htmlFor="a-dob" required error={errors.dateOfBirth?.message}>
@@ -150,57 +159,57 @@ export function ApplicationForm({
         </Field>
 
         <Field label="Mobile number" htmlFor="a-mobile" required error={errors.mobile?.message}>
-          <Input id="a-mobile" type="tel" inputMode="tel" autoComplete="tel" aria-invalid={Boolean(errors.mobile)} {...register("mobile")} />
+          <Input id="a-mobile" type="tel" inputMode="tel" placeholder="e.g. +91 98765 43210" autoComplete="tel" aria-invalid={Boolean(errors.mobile)} {...register("mobile")} />
         </Field>
 
         <Field label="WhatsApp number" htmlFor="a-whatsapp" error={errors.whatsapp?.message} hint="Leave blank if the same as above.">
-          <Input id="a-whatsapp" type="tel" inputMode="tel" aria-invalid={Boolean(errors.whatsapp)} {...register("whatsapp")} />
+          <Input id="a-whatsapp" type="tel" inputMode="tel" placeholder="e.g. +91 98765 43210" aria-invalid={Boolean(errors.whatsapp)} {...register("whatsapp")} />
         </Field>
 
         <Field label="Email" htmlFor="a-email" required error={errors.email?.message} className="sm:col-span-2">
-          <Input id="a-email" type="email" autoComplete="email" aria-invalid={Boolean(errors.email)} {...register("email")} />
+          <Input id="a-email" type="email" placeholder="e.g. ramesh@example.com" autoComplete="email" aria-invalid={Boolean(errors.email)} {...register("email")} />
         </Field>
       </Section>
 
       <Section step={2} title="Address details">
         <Field label="Current address" htmlFor="a-address" required error={errors.currentAddress?.message} className="sm:col-span-2">
-          <Textarea id="a-address" rows={2} autoComplete="street-address" aria-invalid={Boolean(errors.currentAddress)} {...register("currentAddress")} />
+          <Textarea id="a-address" rows={2} placeholder="e.g. 12, MG Road, Indiranagar" autoComplete="street-address" aria-invalid={Boolean(errors.currentAddress)} {...register("currentAddress")} />
         </Field>
 
         <Field label="City" htmlFor="a-city" required error={errors.city?.message}>
-          <Input id="a-city" autoComplete="address-level2" aria-invalid={Boolean(errors.city)} {...register("city")} />
+          <Input id="a-city" placeholder="e.g. Bengaluru" autoComplete="address-level2" aria-invalid={Boolean(errors.city)} {...register("city")} />
         </Field>
 
         <Field label="State" htmlFor="a-state" required error={errors.state?.message}>
-          <Input id="a-state" autoComplete="address-level1" aria-invalid={Boolean(errors.state)} {...register("state")} />
+          <Input id="a-state" placeholder="e.g. Karnataka" autoComplete="address-level1" aria-invalid={Boolean(errors.state)} {...register("state")} />
         </Field>
 
         <Field label="PIN code" htmlFor="a-pin" required error={errors.pinCode?.message}>
-          <Input id="a-pin" inputMode="numeric" maxLength={6} autoComplete="postal-code" aria-invalid={Boolean(errors.pinCode)} {...register("pinCode")} />
+          <Input id="a-pin" inputMode="numeric" maxLength={6} placeholder="e.g. 560038" autoComplete="postal-code" aria-invalid={Boolean(errors.pinCode)} {...register("pinCode")} />
         </Field>
       </Section>
 
       <Section step={3} title="Business information">
         <Field label="Current occupation" htmlFor="a-occupation" required error={errors.currentOccupation?.message}>
-          <Input id="a-occupation" aria-invalid={Boolean(errors.currentOccupation)} {...register("currentOccupation")} />
+          <Input id="a-occupation" placeholder="e.g. Restaurant owner" aria-invalid={Boolean(errors.currentOccupation)} {...register("currentOccupation")} />
         </Field>
 
         <Field label="Company name" htmlFor="a-company" error={errors.companyName?.message} hint="If you run a registered business.">
-          <Input id="a-company" {...register("companyName")} />
+          <Input id="a-company" placeholder="e.g. ABC Foods Pvt. Ltd." {...register("companyName")} />
         </Field>
 
         <Field label="GST number" htmlFor="a-gst" error={errors.gstNumber?.message} hint="15 characters. Leave blank if not registered.">
-          <Input id="a-gst" maxLength={15} className="uppercase" aria-invalid={Boolean(errors.gstNumber)} {...register("gstNumber")} />
+          <Input id="a-gst" maxLength={15} placeholder="e.g. 29AAAAA0000A1Z5" className="uppercase" aria-invalid={Boolean(errors.gstNumber)} {...register("gstNumber")} />
         </Field>
 
         <Field label="Business experience" htmlFor="a-experience" error={errors.businessExperience?.message} className="sm:col-span-2">
-          <Textarea id="a-experience" rows={3} placeholder="Any experience running a business, in food service or otherwise." {...register("businessExperience")} />
+          <Textarea id="a-experience" rows={3} placeholder="e.g. 5 years running a restaurant or retail business" {...register("businessExperience")} />
         </Field>
       </Section>
 
       <Section step={4} title="Franchise details" description="Where and how you would like to operate.">
         <Field label="Preferred city" htmlFor="a-pref-city" required error={errors.preferredCity?.message}>
-          <Input id="a-pref-city" aria-invalid={Boolean(errors.preferredCity)} {...register("preferredCity")} />
+          <Input id="a-pref-city" placeholder="e.g. Bengaluru" aria-invalid={Boolean(errors.preferredCity)} {...register("preferredCity")} />
         </Field>
 
         <Field label="Preferred territory" htmlFor="a-territory" error={errors.preferredTerritory?.message}>
@@ -213,7 +222,7 @@ export function ApplicationForm({
 
         <Field label="Franchise model" htmlFor="a-model" error={errors.franchiseModel?.message}>
           <Select id="a-model" {...register("franchiseModel")}>
-            <option value="">Select…</option>
+            <option value="">Select a franchise model…</option>
             {FRANCHISE_MODELS.map((model) => (
               <option key={model} value={model}>{model}</option>
             ))}
@@ -222,7 +231,7 @@ export function ApplicationForm({
 
         <Field label="Expected start date" htmlFor="a-start" error={errors.expectedStartDate?.message}>
           <Select id="a-start" {...register("expectedStartDate")}>
-            <option value="">Select…</option>
+            <option value="">Select a start window…</option>
             {START_WINDOWS.map((window) => (
               <option key={window} value={window}>{window}</option>
             ))}
@@ -240,7 +249,7 @@ export function ApplicationForm({
         </Field>
 
         <Field label="Bank name" htmlFor="a-bank" error={errors.bankName?.message} className="sm:col-span-2">
-          <Input id="a-bank" {...register("bankName")} />
+          <Input id="a-bank" placeholder="e.g. State Bank of India" {...register("bankName")} />
         </Field>
       </Section>
 
@@ -301,7 +310,36 @@ export function ApplicationForm({
           Submit application
         </Button>
       </div>
-    </form>
+      </form>
+
+      <ConfirmDialog
+        open={Boolean(reviewValues)}
+        onOpenChange={(open) => !open && setReviewValues(null)}
+        title="Submit your franchise application?"
+        description="Please confirm that every detail is complete and correct."
+        confirmLabel="Submit application"
+        onConfirm={confirmSubmit}
+      >
+        <div className="space-y-3">
+          <div className="flex gap-3 rounded-xl border border-warn/30 bg-warn/10 px-3.5 py-3">
+            <TriangleAlert className="mt-0.5 size-5 shrink-0 text-[#9a6410]" />
+            <div>
+              <p className="text-[0.82rem] font-semibold text-ink">
+                You cannot edit the application after submission.
+              </p>
+              <p className="mt-1 text-[0.75rem] leading-relaxed text-ink-soft">
+                Go back and check any details now. Once submitted, contact the
+                Khana Banao team if something needs to be corrected.
+              </p>
+            </div>
+          </div>
+          <p className="text-[0.78rem] leading-relaxed text-ink-soft">
+            By continuing, you confirm that the information and declarations
+            in this application are accurate.
+          </p>
+        </div>
+      </ConfirmDialog>
+    </>
   );
 }
 

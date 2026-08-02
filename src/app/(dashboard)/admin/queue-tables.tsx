@@ -189,24 +189,6 @@ export function DocumentsQueueTable({
   const columns = useMemo<ColumnDef<DocumentQueueRow, unknown>[]>(
     () => [
       {
-        id: "documentType",
-        header: "Document",
-        cell: ({ row }) => (
-          <div className="min-w-0">
-            <Link
-              href={`${basePath}/${row.original.leadId}?tab=documents`}
-              className="block truncate font-medium text-ink hover:text-brand-crimson"
-            >
-              {DOCUMENT_TYPE_LABELS[row.original.documentType]}
-            </Link>
-            <p className="truncate text-[0.68rem] text-ink-soft">
-              {row.original.fileName}
-              {row.original.version > 1 && ` · v${row.original.version}`}
-            </p>
-          </div>
-        ),
-      },
-      {
         id: "applicant",
         header: "Applicant",
         cell: ({ row }) => (
@@ -215,6 +197,39 @@ export function DocumentsQueueTable({
             name={row.original.leadName}
             number={row.original.leadNumber}
           />
+        ),
+      },
+      {
+        id: "documents",
+        header: "Documents",
+        cell: ({ row }) => (
+          <Link
+            href={`${basePath}/${row.original.leadId}?tab=documents`}
+            className="block max-w-sm text-ink hover:text-brand-crimson"
+          >
+            <span className="font-medium">
+              {row.original.requestedCount} requested
+            </span>
+            <span className="mt-0.5 block truncate text-[0.68rem] text-ink-soft">
+              {row.original.documentTypes
+                .map((type) => DOCUMENT_TYPE_LABELS[type])
+                .join(", ")}
+            </span>
+          </Link>
+        ),
+      },
+      {
+        id: "progress",
+        header: "Progress",
+        cell: ({ row }) => (
+          <div className="whitespace-nowrap">
+            <span className="font-medium text-ink">
+              {row.original.approvedCount}/{row.original.requestedCount} approved
+            </span>
+            <span className="mt-0.5 block text-[0.68rem] text-ink-soft">
+              {row.original.uploadedCount}/{row.original.requestedCount} uploaded
+            </span>
+          </div>
         ),
       },
       {
@@ -233,7 +248,9 @@ export function DocumentsQueueTable({
         meta: { sortKey: "uploaded_at", hideOnMobile: true } satisfies ColumnMetaConfig,
         cell: ({ row }) => (
           <span className="whitespace-nowrap text-ink-soft">
-            {formatDateTime(row.original.uploadedAt)}
+            {row.original.uploadedAt
+              ? formatDateTime(row.original.uploadedAt)
+              : "Not uploaded"}
           </span>
         ),
       },
@@ -278,8 +295,8 @@ export function DocumentsQueueTable({
         },
       ]}
       rowHref={(row) => `${basePath}/${row.leadId}?tab=documents`}
-      emptyTitle="Nothing to review"
-      emptyBody="Uploaded documents land here for per-document approval."
+      emptyTitle="No document requests"
+      emptyBody="Each applicant appears here once after documents are requested."
     />
   );
 }

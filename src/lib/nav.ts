@@ -86,5 +86,6 @@ export function navFor(role: Role): NavGroup[] {
  */
 export function isActiveNav(pathname: string, href: string): boolean {
   if (pathname === href) return true;
+  if (href === "/admin" || href === "/member" || href === "/") return false;
   return pathname.startsWith(`${href}/`);
 }

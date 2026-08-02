@@ -1,9 +1,10 @@
 "use server";
 
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { requireAdmin, requireProfile } from "@/lib/auth/session";
 import { resolveToken } from "@/lib/data/tokens";
-import { canApplicantUpload, overallDocumentStatus } from "@/lib/domain/documents";
+import { overallDocumentStatus } from "@/lib/domain/documents";
 import {
   DOCUMENT_TYPES,
   DOCUMENT_TYPE_LABELS,
@@ -15,13 +16,13 @@ import {
 import { isAdmin } from "@/lib/domain/permissions";
 import { canTransition } from "@/lib/domain/transitions";
 import { sendTemplateEmail } from "@/lib/email/send";
-import { appUrl } from "@/lib/env";
+import { appUrl, documentTokenSecret } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
-  checkUpload,
+  ALLOWED_DOCUMENT_TYPES,
+  MAX_UPLOAD_BYTES,
   documentPath,
   removeFile,
-  uploadFile,
 } from "@/lib/storage";
 import { createToken, documentsUrl, hashToken } from "@/lib/tokens";
 import type { ActionResult } from "@/lib/validation/result";
@@ -62,7 +63,26 @@ async function syncDocumentStatus(applicationId: string, leadId: string) {
   if (!lead) return target;
 
   const from = lead.current_status as LeadStatus;
-  if (from !== target && canTransition(from, target)) {
+  const documentStages = new Set<LeadStatus>([
+    "DOCUMENTS_PENDING",
+    "DOCUMENTS_PARTIALLY_SUBMITTED",
+    "DOCUMENTS_UNDER_REVIEW",
+    "DOCUMENT_CORRECTION_REQUIRED",
+    "DOCUMENTS_APPROVED",
+  ]);
+
+  // These statuses are a roll-up of the request rows, not a manually chosen
+  // pipeline jump. For example, approving the final outstanding document can
+  // legitimately recalculate PARTIALLY_SUBMITTED straight to APPROVED. The
+  // ordinary transition map rejects that skipped display state, which left the
+  // lead stale even though every underlying request was approved.
+  const isDocumentRollupCorrection =
+    documentStages.has(from) && documentStages.has(target);
+
+  if (
+    from !== target &&
+    (canTransition(from, target) || isDocumentRollupCorrection)
+  ) {
     await supabase
       .from("leads")
       .update({ current_status: target })
@@ -266,99 +286,392 @@ export async function cancelDocumentRequest(
 // Applicant upload — authenticated by token only
 // -------------------------------------------------------------------
 
-export async function uploadDocument(
-  token: string,
-  formData: FormData,
-): Promise<ActionResult<{ documentType: string }>> {
-  const resolved = await resolveToken(token, "DOCUMENTS");
-  if (!resolved.ok) return { ok: false, message: "This link is no longer valid." };
+const UPLOAD_RECEIPT_TTL_MS = 15 * 60 * 1000;
+const UPLOAD_RECEIPT_CONTEXT = "DOCUMENT_UPLOAD_V1";
 
-  const requestId = String(formData.get("requestId") ?? "");
-  const file = formData.get("file");
+export type DocumentUploadMetadata = {
+  requestId: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+};
 
-  if (!(file instanceof File)) {
-    return { ok: false, message: "Choose a file to upload." };
+export type PreparedDocumentUpload = {
+  requestId: string;
+  path: string;
+  uploadToken: string;
+  receipt: string;
+};
+
+type UploadReceiptPayload = DocumentUploadMetadata & {
+  applicationId: string;
+  documentType: DocumentType;
+  path: string;
+  version: number;
+  tokenId: string;
+  expiresAt: number;
+};
+
+function validateUploadMetadata(file: DocumentUploadMetadata): string | null {
+  if (!file.requestId || !file.fileName.trim()) return "Choose a valid file.";
+  if (!Number.isSafeInteger(file.fileSize) || file.fileSize <= 0) {
+    return "That file is empty.";
+  }
+  if (file.fileSize > MAX_UPLOAD_BYTES) {
+    return `That file is ${(file.fileSize / 1024 / 1024).toFixed(1)} MB. The limit is 10 MB.`;
+  }
+  if (!(ALLOWED_DOCUMENT_TYPES as readonly string[]).includes(file.mimeType)) {
+    return "Accepted formats are PDF, JPG, PNG and WebP.";
+  }
+  return null;
+}
+
+function uploadReceiptSignature(encodedPayload: string): string {
+  return createHmac("sha256", documentTokenSecret())
+    .update(`${UPLOAD_RECEIPT_CONTEXT}:${encodedPayload}`)
+    .digest("base64url");
+}
+
+function createUploadReceipt(payload: UploadReceiptPayload): string {
+  const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  return `${encoded}.${uploadReceiptSignature(encoded)}`;
+}
+
+function readUploadReceipt(receipt: string): UploadReceiptPayload | null {
+  const separator = receipt.lastIndexOf(".");
+  if (separator <= 0) return null;
+
+  const encoded = receipt.slice(0, separator);
+  const signature = receipt.slice(separator + 1);
+  const expected = uploadReceiptSignature(encoded);
+  const suppliedBytes = Buffer.from(signature);
+  const expectedBytes = Buffer.from(expected);
+  if (
+    suppliedBytes.length !== expectedBytes.length ||
+    !timingSafeEqual(suppliedBytes, expectedBytes)
+  ) {
+    return null;
   }
 
-  const check = checkUpload(file);
-  if (!check.ok) return { ok: false, message: check.message };
+  try {
+    const payload = JSON.parse(
+      Buffer.from(encoded, "base64url").toString("utf8"),
+    ) as Partial<UploadReceiptPayload>;
+    if (
+      typeof payload.requestId !== "string" ||
+      typeof payload.applicationId !== "string" ||
+      typeof payload.path !== "string" ||
+      typeof payload.fileName !== "string" ||
+      typeof payload.fileSize !== "number" ||
+      typeof payload.mimeType !== "string" ||
+      typeof payload.version !== "number" ||
+      typeof payload.tokenId !== "string" ||
+      typeof payload.expiresAt !== "number" ||
+      !(DOCUMENT_TYPES as readonly string[]).includes(payload.documentType ?? "")
+    ) {
+      return null;
+    }
+    return payload as UploadReceiptPayload;
+  } catch {
+    return null;
+  }
+}
+
+async function removePreparedObjects(payloads: UploadReceiptPayload[]) {
+  await Promise.all(
+    payloads.map((payload) =>
+      removeFile(STORAGE_BUCKETS.documents, payload.path),
+    ),
+  );
+}
+
+async function removeUnregisteredPreparedObjects(payloads: UploadReceiptPayload[]) {
+  if (payloads.length === 0) return;
 
   const supabase = createAdminClient();
+  const { data: registered } = await supabase
+    .from("documents")
+    .select("storage_path")
+    .in("storage_path", payloads.map((payload) => payload.path));
+  const registeredPaths = new Set(
+    (registered ?? []).map((document) => document.storage_path),
+  );
+  await removePreparedObjects(
+    payloads.filter((payload) => !registeredPaths.has(payload.path)),
+  );
+}
 
-  const { data: request } = await supabase
-    .from("document_requests")
-    .select("id, application_id, document_type, status")
-    .eq("id", requestId)
-    .maybeSingle();
-
-  if (!request) return { ok: false, message: "That document was not requested." };
-
-  // The token identifies a lead; confirm the request belongs to *that* lead's
-  // application, or one applicant's token could write to another's documents.
-  if (request.application_id !== resolved.data.applicationId) {
-    return { ok: false, message: "That document was not requested." };
+/**
+ * Validates the applicant and returns path-bound Supabase upload tokens.
+ * Only small metadata crosses the Next.js server; file bytes do not.
+ */
+export async function prepareDocumentUploads(
+  token: string,
+  files: DocumentUploadMetadata[],
+): Promise<ActionResult<{ uploads: PreparedDocumentUpload[] }>> {
+  const resolved = await resolveToken(token, "DOCUMENTS");
+  if (!resolved.ok) return { ok: false, message: "This link is no longer valid." };
+  if (!resolved.data.applicationId) {
+    return { ok: false, message: "That application no longer exists." };
+  }
+  if (!Array.isArray(files)) {
+    return { ok: false, message: "Choose a file for every document first." };
   }
 
-  // Approved documents are locked (spec §15).
-  if (!canApplicantUpload(request.status as DocumentStatus)) {
+  const supabase = createAdminClient();
+  const { data: requests } = await supabase
+    .from("document_requests")
+    .select("id, application_id, document_type, status")
+    .eq("application_id", resolved.data.applicationId)
+    .in("status", ["REQUESTED", "REUPLOAD_REQUIRED"])
+    .order("requested_at");
+
+  const outstanding = requests ?? [];
+  if (outstanding.length === 0) {
+    return { ok: false, message: "All requested documents have already been submitted." };
+  }
+
+  const submittedIds = files.map((file) => file.requestId);
+  const expectedIds = new Set(outstanding.map((request) => request.id));
+  if (
+    submittedIds.length !== outstanding.length ||
+    new Set(submittedIds).size !== submittedIds.length ||
+    submittedIds.some((id) => !expectedIds.has(id))
+  ) {
+    return { ok: false, message: "Choose a file for every document first." };
+  }
+
+  const metadataByRequest = new Map(files.map((file) => [file.requestId, file]));
+  for (const request of outstanding) {
+    const file = metadataByRequest.get(request.id)!;
+    const error = validateUploadMetadata(file);
+    if (error) {
+      return {
+        ok: false,
+        message: `${DOCUMENT_TYPE_LABELS[request.document_type]}: ${error}`,
+      };
+    }
+  }
+
+  const requestIds = outstanding.map((request) => request.id);
+  const { data: previous } = await supabase
+    .from("documents")
+    .select("document_request_id, version")
+    .in("document_request_id", requestIds)
+    .order("version", { ascending: false });
+
+  const latestVersion = new Map<string, number>();
+  for (const document of previous ?? []) {
+    if (!latestVersion.has(document.document_request_id)) {
+      latestVersion.set(document.document_request_id, document.version);
+    }
+  }
+
+  const expiresAt = Date.now() + UPLOAD_RECEIPT_TTL_MS;
+  const uploads: PreparedDocumentUpload[] = [];
+  for (const request of outstanding) {
+    const file = metadataByRequest.get(request.id)!;
+    const fileName = file.fileName.trim().slice(0, 200);
+    const version = (latestVersion.get(request.id) ?? 0) + 1;
+    const path = documentPath(
+      request.application_id,
+      request.document_type,
+      version,
+      fileName,
+    );
+    const { data, error } = await supabase.storage
+      .from(STORAGE_BUCKETS.documents)
+      .createSignedUploadUrl(path);
+
+    if (error || !data?.token) {
+      return {
+        ok: false,
+        message: "Could not prepare the secure upload. Please try again.",
+      };
+    }
+
+    const payload: UploadReceiptPayload = {
+      requestId: request.id,
+      applicationId: request.application_id,
+      documentType: request.document_type,
+      path,
+      version,
+      fileName,
+      fileSize: file.fileSize,
+      mimeType: file.mimeType,
+      tokenId: resolved.data.tokenId,
+      expiresAt,
+    };
+    uploads.push({
+      requestId: request.id,
+      path,
+      uploadToken: data.token,
+      receipt: createUploadReceipt(payload),
+    });
+  }
+
+  return { ok: true, data: { uploads } };
+}
+
+/** Registers objects only after the browser has uploaded them to Supabase. */
+export async function finalizeDocumentUploads(
+  token: string,
+  receipts: string[],
+): Promise<ActionResult<{ count: number }>> {
+  const resolved = await resolveToken(token, "DOCUMENTS");
+  if (!resolved.ok) return { ok: false, message: "This link is no longer valid." };
+  if (!resolved.data.applicationId) {
+    return { ok: false, message: "That application no longer exists." };
+  }
+  if (!Array.isArray(receipts)) {
+    return { ok: false, message: "The upload confirmation is invalid." };
+  }
+
+  const payloads = receipts.map(readUploadReceipt);
+  if (payloads.some((payload) => !payload)) {
+    return { ok: false, message: "The upload confirmation is invalid." };
+  }
+  const uploads = payloads as UploadReceiptPayload[];
+  if (
+    uploads.some(
+      (upload) =>
+        upload.applicationId !== resolved.data.applicationId ||
+        upload.tokenId !== resolved.data.tokenId ||
+        upload.expiresAt < Date.now() ||
+        validateUploadMetadata(upload) !== null,
+    )
+  ) {
+    return { ok: false, message: "The secure upload expired. Please try again." };
+  }
+
+  const supabase = createAdminClient();
+  const { data: requests } = await supabase
+    .from("document_requests")
+    .select("id, application_id, document_type, status")
+    .eq("application_id", resolved.data.applicationId)
+    .in("status", ["REQUESTED", "REUPLOAD_REQUIRED"])
+    .order("requested_at");
+
+  const outstanding = requests ?? [];
+  const expectedById = new Map(outstanding.map((request) => [request.id, request]));
+  if (
+    uploads.length !== outstanding.length ||
+    new Set(uploads.map((upload) => upload.requestId)).size !== uploads.length ||
+    uploads.some((upload) => {
+      const request = expectedById.get(upload.requestId);
+      return !request || request.document_type !== upload.documentType;
+    })
+  ) {
+    await removeUnregisteredPreparedObjects(uploads);
+    return { ok: false, message: "The requested document list changed. Please try again." };
+  }
+
+  const requestIds = outstanding.map((request) => request.id);
+  const { data: previous } = await supabase
+    .from("documents")
+    .select("document_request_id, version")
+    .in("document_request_id", requestIds)
+    .order("version", { ascending: false });
+  const latestVersion = new Map<string, number>();
+  for (const document of previous ?? []) {
+    if (!latestVersion.has(document.document_request_id)) {
+      latestVersion.set(document.document_request_id, document.version);
+    }
+  }
+  if (
+    uploads.some(
+      (upload) => upload.version !== (latestVersion.get(upload.requestId) ?? 0) + 1,
+    )
+  ) {
+    await removeUnregisteredPreparedObjects(uploads);
+    return { ok: false, message: "A newer document version already exists." };
+  }
+
+  const objectChecks = await Promise.all(
+    uploads.map(async (upload) => {
+      const { data, error } = await supabase.storage
+        .from(STORAGE_BUCKETS.documents)
+        .info(upload.path);
+      return {
+        ok:
+          !error &&
+          data?.size === upload.fileSize &&
+          data.contentType === upload.mimeType,
+      };
+    }),
+  );
+  if (objectChecks.some((check) => !check.ok)) {
+    await removeUnregisteredPreparedObjects(uploads);
     return {
       ok: false,
-      message:
-        request.status === "APPROVED"
-          ? "That document is already approved and cannot be replaced."
-          : "That document has already been received and is being reviewed.",
+      message: "One or more files did not upload correctly. Please choose them again.",
     };
   }
 
-  const { data: latest } = await supabase
+  const inserts = uploads.map((upload) => ({
+    document_request_id: upload.requestId,
+    application_id: upload.applicationId,
+    document_type: upload.documentType,
+    storage_path: upload.path,
+    file_name: upload.fileName,
+    file_size: upload.fileSize,
+    mime_type: upload.mimeType,
+    version: upload.version,
+    status: "UPLOADED" as const,
+  }));
+  const { data: inserted, error: insertError } = await supabase
     .from("documents")
-    .select("version")
-    .eq("document_request_id", request.id)
-    .order("version", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .insert(inserts)
+    .select("id");
 
-  const version = (latest?.version ?? 0) + 1;
-  const path = documentPath(
-    request.application_id,
-    request.document_type,
-    version,
-    file.name,
-  );
-
-  const uploaded = await uploadFile(STORAGE_BUCKETS.documents, path, file);
-  if (!uploaded.ok) return { ok: false, message: uploaded.message };
-
-  const { error } = await supabase.from("documents").insert({
-    document_request_id: request.id,
-    application_id: request.application_id,
-    document_type: request.document_type,
-    storage_path: path,
-    file_name: file.name.slice(0, 200),
-    file_size: file.size,
-    mime_type: file.type,
-    version,
-    status: "UPLOADED",
-  });
-
-  if (error) {
-    // Do not leave an orphan file behind if the row failed to write.
-    await removeFile(STORAGE_BUCKETS.documents, path);
-    return { ok: false, message: error.message };
+  if (insertError) {
+    await removeUnregisteredPreparedObjects(uploads);
+    return { ok: false, message: insertError.message };
   }
 
-  await supabase
+  const { error: updateError } = await supabase
     .from("document_requests")
     .update({ status: "UPLOADED" })
-    .eq("id", request.id);
+    .in("id", requestIds)
+    .in("status", ["REQUESTED", "REUPLOAD_REQUIRED"]);
 
-  await syncDocumentStatus(request.application_id, resolved.data.leadId);
+  if (updateError) {
+    await supabase
+      .from("documents")
+      .delete()
+      .in("id", (inserted ?? []).map((document) => document.id));
+    await removeUnregisteredPreparedObjects(uploads);
+    return { ok: false, message: updateError.message };
+  }
+
+  await syncDocumentStatus(resolved.data.applicationId, resolved.data.leadId);
   refresh(resolved.data.leadId);
+  return { ok: true, data: { count: inserts.length } };
+}
 
-  return {
-    ok: true,
-    data: { documentType: DOCUMENT_TYPE_LABELS[request.document_type] },
-  };
+/** Best-effort cleanup if a browser-side direct upload fails midway. */
+export async function discardDocumentUploads(
+  token: string,
+  receipts: string[],
+): Promise<ActionResult> {
+  const resolved = await resolveToken(token, "DOCUMENTS");
+  if (!resolved.ok || !Array.isArray(receipts)) {
+    return { ok: false, message: "This link is no longer valid." };
+  }
+
+  const payloads = receipts
+    .map(readUploadReceipt)
+    .filter((payload): payload is UploadReceiptPayload => Boolean(payload))
+    .filter(
+      (payload) =>
+        payload.applicationId === resolved.data.applicationId &&
+        payload.tokenId === resolved.data.tokenId,
+    );
+
+  if (payloads.length > 0) {
+    await removeUnregisteredPreparedObjects(payloads);
+  }
+  return { ok: true };
 }
 
 // -------------------------------------------------------------------

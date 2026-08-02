@@ -118,9 +118,10 @@ export function EmailConfirmDialog({
           )}
         </DialogBody>
 
-        <DialogFooter>
+        <DialogFooter className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <Button
             type="button"
+            className="w-full"
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={busy}
@@ -129,6 +130,7 @@ export function EmailConfirmDialog({
           </Button>
           <Button
             type="button"
+            className="w-full"
             variant="secondary"
             loading={pending === "silent"}
             disabled={busy || disabled}
@@ -139,6 +141,7 @@ export function EmailConfirmDialog({
           </Button>
           <Button
             type="button"
+            className="w-full sm:col-span-2"
             variant={variant === "danger" ? "danger" : variant === "success" ? "success" : "primary"}
             loading={pending === "email"}
             disabled={busy || disabled}

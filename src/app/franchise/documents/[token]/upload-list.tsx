@@ -2,15 +2,33 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, CircleAlert, Clock, Upload } from "lucide-react";
+import {
+  CheckCircle2,
+  CircleAlert,
+  Clock,
+  FileCheck2,
+  RefreshCw,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { toast } from "sonner";
-import { uploadDocument } from "@/app/actions/documents";
+import {
+  discardDocumentUploads,
+  finalizeDocumentUploads,
+  prepareDocumentUploads,
+} from "@/app/actions/documents";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DOCUMENT_TYPE_LABELS, type DocumentType } from "@/lib/domain/enums";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  DOCUMENT_TYPE_LABELS,
+  STORAGE_BUCKETS,
+  type DocumentType,
+} from "@/lib/domain/enums";
 import { DOCUMENT_STATUS_LABELS } from "@/lib/domain/status";
 import { formatBytes, formatDateTime } from "@/lib/format";
 import type { DocumentStatus } from "@/lib/domain/enums";
+import { createClient } from "@/lib/supabase/client";
 
 export type UploadRow = {
   requestId: string;
@@ -27,6 +45,24 @@ export type UploadRow = {
 };
 
 const ACCEPT = ".pdf,.jpg,.jpeg,.png,.webp";
+const MAX_BYTES = 10 * 1024 * 1024;
+const ALLOWED_TYPES = new Set([
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+
+function validateFile(file: File) {
+  if (file.size === 0) return "That file is empty.";
+  if (file.size > MAX_BYTES) {
+    return `That file is ${(file.size / 1024 / 1024).toFixed(1)} MB. The limit is 10 MB.`;
+  }
+  if (!ALLOWED_TYPES.has(file.type)) {
+    return "Accepted formats are PDF, JPG, PNG and WebP.";
+  }
+  return null;
+}
 
 export function UploadList({
   token,
@@ -36,11 +72,99 @@ export function UploadList({
   rows: UploadRow[];
 }) {
   const router = useRouter();
-  const [busy, setBusy] = useState<string | null>(null);
+  const [files, setFiles] = useState<Record<string, File>>({});
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const outstanding = rows.filter(
     (row) => row.status === "REQUESTED" || row.status === "REUPLOAD_REQUIRED",
   );
+  const readyCount = outstanding.filter((row) => files[row.requestId]).length;
+  const allReady = outstanding.length > 0 && readyCount === outstanding.length;
+
+  const chooseFile = (requestId: string, file: File) => {
+    const error = validateFile(file);
+    if (error) {
+      toast.error(error);
+      return;
+    }
+    setFiles((current) => ({ ...current, [requestId]: file }));
+  };
+
+  const removeFile = (requestId: string) => {
+    setFiles((current) => {
+      const next = { ...current };
+      delete next[requestId];
+      return next;
+    });
+  };
+
+  const submit = async () => {
+    const selected = [];
+    for (const row of outstanding) {
+      const file = files[row.requestId];
+      if (!file) {
+        return { ok: false, message: "Choose a file for every document first." };
+      }
+      selected.push({
+        requestId: row.requestId,
+        fileName: file.name,
+        fileSize: file.size,
+        mimeType: file.type,
+      });
+    }
+
+    const prepared = await prepareDocumentUploads(token, selected);
+    if (!prepared.ok) return prepared;
+
+    const receipts = prepared.data.uploads.map((upload) => upload.receipt);
+    try {
+      const supabase = createClient();
+      const results = await Promise.all(
+        prepared.data.uploads.map(async (upload) => {
+          const file = files[upload.requestId];
+          if (!file) return { error: new Error("A selected file is no longer available.") };
+          const { error } = await supabase.storage
+            .from(STORAGE_BUCKETS.documents)
+            .uploadToSignedUrl(upload.path, upload.uploadToken, file, {
+              cacheControl: "3600",
+              contentType: file.type,
+            });
+          return { error };
+        }),
+      );
+
+      const failed = results.find((result) => result.error)?.error;
+      if (failed) {
+        await discardDocumentUploads(token, receipts);
+        return {
+          ok: false,
+          message: `A file could not be uploaded: ${failed.message}`,
+        };
+      }
+
+      const result = await finalizeDocumentUploads(token, receipts);
+      if (!result.ok) {
+        await discardDocumentUploads(token, receipts);
+        return result;
+      }
+
+      toast.success(
+        `${result.data.count} document${result.data.count === 1 ? "" : "s"} submitted for review.`,
+      );
+      setFiles({});
+      router.refresh();
+      return result;
+    } catch (error) {
+      await discardDocumentUploads(token, receipts);
+      return {
+        ok: false,
+        message:
+          error instanceof Error
+            ? `The direct upload failed: ${error.message}`
+            : "The direct upload failed. Please try again.",
+      };
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -56,77 +180,122 @@ export function UploadList({
           </p>
         </div>
       ) : (
-        <p className="rounded-xl border border-line bg-surface px-4 py-3 text-[0.82rem] leading-relaxed text-ink-soft">
-          <strong className="text-ink">
-            {outstanding.length} document{outstanding.length === 1 ? "" : "s"}
-          </strong>{" "}
-          still needed. PDF, JPG, PNG or WebP, up to 10&nbsp;MB each.
-        </p>
+        <div className="rounded-xl border border-line bg-surface px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[0.82rem] leading-relaxed text-ink-soft">
+              <strong className="text-ink">
+                {readyCount} of {outstanding.length} document
+                {outstanding.length === 1 ? "" : "s"} ready
+              </strong>
+              . PDF, JPG, PNG or WebP, up to 10&nbsp;MB each.
+            </p>
+            <Badge tone={allReady ? "success" : "neutral"}>
+              <FileCheck2 className="size-3" />
+              {allReady ? "Ready to submit" : `${outstanding.length - readyCount} remaining`}
+            </Badge>
+          </div>
+          <p className="mt-1.5 text-[0.72rem] text-ink-soft">
+            Selected files stay on this device until submission, then upload
+            directly to our secure private storage.
+          </p>
+        </div>
       )}
 
       <ul className="space-y-3">
         {rows.map((row) => (
           <UploadItem
             key={row.requestId}
-            token={token}
             row={row}
-            busy={busy === row.requestId}
-            onBusyChange={(value) => setBusy(value ? row.requestId : null)}
-            onUploaded={() => router.refresh()}
+            file={files[row.requestId] ?? null}
+            onFile={(file) => chooseFile(row.requestId, file)}
+            onRemove={() => removeFile(row.requestId)}
           />
         ))}
       </ul>
+
+      {outstanding.length > 0 && (
+        <section className="rounded-2xl border border-brand-red/20 bg-[linear-gradient(135deg,rgba(229,72,63,0.07),rgba(19,152,235,0.04))] p-4 sm:flex sm:items-center sm:justify-between sm:gap-5">
+          <div>
+            <h2 className="font-display text-base font-bold text-ink">
+              Submit all documents together
+            </h2>
+            <p className="mt-1 text-[0.76rem] leading-relaxed text-ink-soft">
+              Check every file first. After submission, files are locked unless
+              our team requests a correction.
+            </p>
+          </div>
+          <Button
+            type="button"
+            className="mt-3 w-full shrink-0 sm:mt-0 sm:w-auto"
+            disabled={!allReady}
+            onClick={() => setConfirmOpen(true)}
+          >
+            <FileCheck2 /> Review and submit
+          </Button>
+        </section>
+      )}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Submit documents for review?"
+        description={`You are about to submit ${outstanding.length} document${outstanding.length === 1 ? "" : "s"}.`}
+        confirmLabel="Submit documents"
+        onConfirm={submit}
+      >
+        <div className="space-y-3">
+          <div className="rounded-xl border border-warn/30 bg-warn/10 px-3.5 py-3 text-[0.8rem] leading-relaxed text-ink">
+            <p className="font-semibold">You cannot change these files after submission.</p>
+            <p className="mt-1 text-ink-soft">
+              You can upload a replacement only if our review team asks you to
+              correct a document.
+            </p>
+          </div>
+          <ul className="max-h-48 space-y-1.5 overflow-y-auto">
+            {outstanding.map((row) => (
+              <li
+                key={row.requestId}
+                className="flex items-center justify-between gap-3 rounded-lg bg-surface-muted/60 px-3 py-2 text-[0.75rem]"
+              >
+                <span className="font-medium text-ink">
+                  {DOCUMENT_TYPE_LABELS[row.documentType]}
+                </span>
+                <span className="max-w-[55%] truncate text-ink-soft">
+                  {files[row.requestId]?.name}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </ConfirmDialog>
     </div>
   );
 }
 
 function UploadItem({
-  token,
   row,
-  busy,
-  onBusyChange,
-  onUploaded,
+  file,
+  onFile,
+  onRemove,
 }: {
-  token: string;
   row: UploadRow;
-  busy: boolean;
-  onBusyChange: (busy: boolean) => void;
-  onUploaded: () => void;
+  file: File | null;
+  onFile: (file: File) => void;
+  onRemove: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-
-  const canUpload =
+  const canSelect =
     row.status === "REQUESTED" || row.status === "REUPLOAD_REQUIRED";
-
-  const onFile = async (file: File) => {
-    onBusyChange(true);
-    try {
-      const formData = new FormData();
-      formData.set("requestId", row.requestId);
-      formData.set("file", file);
-
-      const result = await uploadDocument(token, formData);
-      if (!result.ok) {
-        toast.error(result.message);
-        return;
-      }
-      toast.success(`${result.data.documentType} uploaded.`);
-      onUploaded();
-    } finally {
-      onBusyChange(false);
-      if (inputRef.current) inputRef.current.value = "";
-    }
-  };
 
   return (
     <li className="rounded-xl border border-line bg-surface px-4 py-3.5">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-[0.9rem] font-semibold text-ink">
               {DOCUMENT_TYPE_LABELS[row.documentType]}
             </h3>
-            <StatusChip status={row.status} />
+            <StatusChip status={row.status} staged={Boolean(file)} />
           </div>
 
           {row.requestNote && (
@@ -142,17 +311,26 @@ function UploadItem({
             </p>
           )}
 
-          {row.latest && (
-            <p className="mt-1.5 text-[0.72rem] text-ink-soft">
-              {row.latest.fileName} · {formatBytes(row.latest.fileSize)} ·
-              uploaded {formatDateTime(row.latest.uploadedAt)}
-              {row.latest.version > 1 && ` · version ${row.latest.version}`}
-            </p>
+          {file ? (
+            <div className="mt-2 rounded-lg border border-brand-blue/25 bg-brand-blue/5 px-3 py-2">
+              <p className="truncate text-[0.78rem] font-medium text-ink">{file.name}</p>
+              <p className="mt-0.5 text-[0.68rem] text-ink-soft">
+                {formatBytes(file.size)} · selected locally, not submitted yet
+              </p>
+            </div>
+          ) : (
+            row.latest && (
+              <p className="mt-1.5 text-[0.72rem] text-ink-soft">
+                {row.latest.fileName} · {formatBytes(row.latest.fileSize)} · uploaded{" "}
+                {formatDateTime(row.latest.uploadedAt)}
+                {row.latest.version > 1 && ` · version ${row.latest.version}`}
+              </p>
+            )
           )}
         </div>
 
-        {canUpload && (
-          <div className="shrink-0">
+        {canSelect && (
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
             <input
               ref={inputRef}
               type="file"
@@ -160,20 +338,31 @@ function UploadItem({
               className="sr-only"
               id={`file-${row.requestId}`}
               onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) void onFile(file);
+                const selected = event.target.files?.[0];
+                if (selected) onFile(selected);
+                event.target.value = "";
               }}
             />
             <Button
               type="button"
               size="sm"
-              variant={row.status === "REUPLOAD_REQUIRED" ? "primary" : "outline"}
-              loading={busy}
+              variant={file ? "outline" : row.status === "REUPLOAD_REQUIRED" ? "primary" : "outline"}
               onClick={() => inputRef.current?.click()}
             >
-              <Upload />
-              {row.latest ? "Replace" : "Upload"}
+              {file ? <RefreshCw /> : <Upload />}
+              {file ? "Replace" : row.latest ? "Choose replacement" : "Choose file"}
             </Button>
+            {file && (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="text-danger hover:bg-danger/5 hover:text-danger"
+                onClick={onRemove}
+              >
+                <Trash2 /> Remove
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -181,7 +370,21 @@ function UploadItem({
   );
 }
 
-function StatusChip({ status }: { status: DocumentStatus }) {
+function StatusChip({
+  status,
+  staged,
+}: {
+  status: DocumentStatus;
+  staged: boolean;
+}) {
+  if (staged) {
+    return (
+      <Badge tone="info">
+        <FileCheck2 className="size-3" aria-hidden="true" />
+        Ready to submit
+      </Badge>
+    );
+  }
   if (status === "APPROVED") {
     return (
       <Badge tone="success">
@@ -194,12 +397,12 @@ function StatusChip({ status }: { status: DocumentStatus }) {
     return (
       <Badge tone="warn">
         <CircleAlert className="size-3" aria-hidden="true" />
-        Re-upload needed
+        Correction needed
       </Badge>
     );
   }
   if (status === "REQUESTED") {
-    return <Badge tone="neutral">Not yet uploaded</Badge>;
+    return <Badge tone="neutral">File needed</Badge>;
   }
   return (
     <Badge tone="info">

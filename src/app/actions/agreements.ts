@@ -4,20 +4,24 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth/session";
 import {
   AGREEMENT_STATUSES,
+  LEAD_STATUSES,
   STORAGE_BUCKETS,
   type AgreementStatus,
+  type LeadStatus,
 } from "@/lib/domain/enums";
 import { canTransition } from "@/lib/domain/transitions";
+import {
+  createDirectUploadReceipt,
+  readDirectUploadReceipt,
+} from "@/lib/direct-upload-receipt";
 import { sendTemplateEmail } from "@/lib/email/send";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   ALLOWED_AGREEMENT_TYPES,
   MAX_AGREEMENT_BYTES,
   agreementPath,
-  checkUpload,
   removeFile,
   signedUrlFor,
-  uploadFile,
 } from "@/lib/storage";
 import { AGREEMENT_STATUS_LABELS } from "@/lib/domain/status";
 import type { ActionResult } from "@/lib/validation/result";
@@ -49,24 +53,131 @@ const ORDER: AgreementStatus[] = [
   "SIGNED_BY_COMPANY",
   "COMPLETED",
 ];
+const AGREEMENT_UPLOAD_PURPOSE = "AGREEMENT_FILE";
+const UPLOAD_RECEIPT_TTL_MS = 15 * 60 * 1000;
+
+export type AgreementUploadMetadata = {
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+};
+
+function agreementMetadataError(file: AgreementUploadMetadata): string | null {
+  if (!file.fileName.trim()) return "Choose the agreement PDF.";
+  if (!Number.isSafeInteger(file.fileSize) || file.fileSize <= 0) {
+    return "That file is empty.";
+  }
+  if (file.fileSize > MAX_AGREEMENT_BYTES) {
+    return `That file is ${(file.fileSize / 1024 / 1024).toFixed(1)} MB. The limit is 20 MB.`;
+  }
+  if (!(ALLOWED_AGREEMENT_TYPES as readonly string[]).includes(file.mimeType)) {
+    return "Only PDF files are accepted here.";
+  }
+  return null;
+}
+
+function agreementStageIsAvailable(status: LeadStatus): boolean {
+  return (
+    status !== "REJECTED" &&
+    LEAD_STATUSES.indexOf(status) >= LEAD_STATUSES.indexOf("FRANCHISE_APPROVED")
+  );
+}
+
+/** Returns a path-bound token; agreement bytes go browser → Supabase. */
+export async function prepareAgreementUpload(
+  leadId: string,
+  file: AgreementUploadMetadata,
+): Promise<
+  ActionResult<{ path: string; uploadToken: string; receipt: string }>
+> {
+  const profile = await requireAdmin();
+  const metadataError = agreementMetadataError(file);
+  if (metadataError) return { ok: false, message: metadataError };
+
+  const supabase = createAdminClient();
+  const { data: lead } = await supabase
+    .from("leads")
+    .select("id, current_status")
+    .eq("id", leadId)
+    .maybeSingle();
+  if (!lead) return { ok: false, message: "That lead no longer exists." };
+  if (!agreementStageIsAvailable(lead.current_status)) {
+    return {
+      ok: false,
+      message:
+        "Finish document review and approve the franchise before managing its agreement.",
+    };
+  }
+
+  const { data: existing } = await supabase
+    .from("agreements")
+    .select("id, version, status")
+    .eq("lead_id", leadId)
+    .order("version", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const startNewVersion = existing?.status === "COMPLETED";
+  const version = existing ? existing.version + (startNewVersion ? 1 : 0) : 1;
+  const fileName = file.fileName.trim().slice(0, 200);
+  const path = agreementPath(leadId, version, fileName);
+  const { data, error } = await supabase.storage
+    .from(STORAGE_BUCKETS.agreements)
+    .createSignedUploadUrl(path);
+  if (error || !data?.token) {
+    return { ok: false, message: "Could not prepare the secure agreement upload." };
+  }
+
+  const receipt = createDirectUploadReceipt({
+    purpose: AGREEMENT_UPLOAD_PURPOSE,
+    bucket: STORAGE_BUCKETS.agreements,
+    path,
+    ownerId: leadId,
+    actorId: profile.id,
+    fileName,
+    fileSize: file.fileSize,
+    mimeType: file.mimeType,
+    expiresAt: Date.now() + UPLOAD_RECEIPT_TTL_MS,
+    attributes: {
+      version,
+      existingId: existing?.id ?? null,
+      startNewVersion,
+    },
+  });
+  return { ok: true, data: { path, uploadToken: data.token, receipt } };
+}
+
+export async function discardAgreementUpload(
+  leadId: string,
+  receipt: string,
+): Promise<ActionResult> {
+  const profile = await requireAdmin();
+  const upload = readDirectUploadReceipt(receipt, AGREEMENT_UPLOAD_PURPOSE);
+  if (
+    !upload ||
+    upload.ownerId !== leadId ||
+    upload.actorId !== profile.id ||
+    upload.bucket !== STORAGE_BUCKETS.agreements
+  ) {
+    return { ok: false, message: "That upload confirmation is invalid." };
+  }
+
+  const supabase = createAdminClient();
+  const { data: registered } = await supabase
+    .from("agreements")
+    .select("id")
+    .eq("storage_path", upload.path)
+    .maybeSingle();
+  if (!registered) await removeFile(STORAGE_BUCKETS.agreements, upload.path);
+  return { ok: true };
+}
 
 export async function uploadAgreement(
   leadId: string,
-  formData: FormData,
+  receipt: string,
+  notesValue: string,
 ): Promise<ActionResult<{ agreementNumber: string }>> {
   const profile = await requireAdmin();
-  const file = formData.get("file");
-  const notes = String(formData.get("notes") ?? "").trim();
-
-  if (!(file instanceof File) || file.size === 0) {
-    return { ok: false, message: "Choose the signed agreement PDF." };
-  }
-
-  const check = checkUpload(file, {
-    maxBytes: MAX_AGREEMENT_BYTES,
-    allowed: ALLOWED_AGREEMENT_TYPES,
-  });
-  if (!check.ok) return { ok: false, message: check.message };
+  const notes = notesValue.trim();
 
   const supabase = createAdminClient();
 
@@ -77,6 +188,13 @@ export async function uploadAgreement(
     .maybeSingle();
 
   if (!lead) return { ok: false, message: "That lead no longer exists." };
+  if (!agreementStageIsAvailable(lead.current_status)) {
+    return {
+      ok: false,
+      message:
+        "Finish document review and approve the franchise before managing its agreement.",
+    };
+  }
 
   const { data: existing } = await supabase
     .from("agreements")
@@ -90,15 +208,49 @@ export async function uploadAgreement(
   // destroy the record, so a new version is started instead.
   const startNewVersion = existing?.status === "COMPLETED";
   const version = existing ? existing.version + (startNewVersion ? 1 : 0) : 1;
-  const path = agreementPath(leadId, version, file.name);
+  const upload = readDirectUploadReceipt(receipt, AGREEMENT_UPLOAD_PURPOSE);
+  const invalid =
+    !upload ||
+    upload.ownerId !== leadId ||
+    upload.actorId !== profile.id ||
+    upload.bucket !== STORAGE_BUCKETS.agreements ||
+    upload.expiresAt < Date.now() ||
+    agreementMetadataError({
+      fileName: upload.fileName,
+      fileSize: upload.fileSize,
+      mimeType: upload.mimeType,
+    }) !== null ||
+    upload.attributes?.version !== version ||
+    upload.attributes?.existingId !== (existing?.id ?? null) ||
+    upload.attributes?.startNewVersion !== startNewVersion;
+  if (invalid || !upload) {
+    return {
+      ok: false,
+      message: "The secure agreement upload expired. Please choose the file again.",
+    };
+  }
 
-  const uploaded = await uploadFile(STORAGE_BUCKETS.agreements, path, file);
-  if (!uploaded.ok) return { ok: false, message: uploaded.message };
+  const { data: object, error: objectError } = await supabase.storage
+    .from(STORAGE_BUCKETS.agreements)
+    .info(upload.path);
+  if (
+    objectError ||
+    object?.size !== upload.fileSize ||
+    object.contentType !== upload.mimeType
+  ) {
+    await removeFile(STORAGE_BUCKETS.agreements, upload.path);
+    return {
+      ok: false,
+      message: "The agreement did not upload correctly. Please try again.",
+    };
+  }
+
+  const path = upload.path;
 
   const values = {
     version,
     storage_path: path,
-    file_name: file.name.slice(0, 200),
+    file_name: upload.fileName,
     status: "UPLOADED" as const,
     notes: notes || null,
     created_by: profile.id,
@@ -177,6 +329,21 @@ export async function advanceAgreement(
 
   if (!agreement) return { ok: false, message: "That agreement no longer exists." };
 
+  const { data: lead } = await supabase
+    .from("leads")
+    .select("id, lead_number, full_name, email, current_status")
+    .eq("id", agreement.lead_id)
+    .maybeSingle();
+
+  if (!lead) return { ok: false, message: "That lead no longer exists." };
+  if (!agreementStageIsAvailable(lead.current_status)) {
+    return {
+      ok: false,
+      message:
+        "Finish document review and approve the franchise before advancing its agreement.",
+    };
+  }
+
   const currentIndex = ORDER.indexOf(agreement.status);
   const targetIndex = ORDER.indexOf(target);
 
@@ -207,14 +374,6 @@ export async function advanceAgreement(
       ...(note?.trim() ? { notes: note.trim() } : {}),
     })
     .eq("id", agreementId);
-
-  const { data: lead } = await supabase
-    .from("leads")
-    .select("id, lead_number, full_name, email, current_status")
-    .eq("id", agreement.lead_id)
-    .maybeSingle();
-
-  if (!lead) return { ok: true };
 
   // Only two agreement stages move the lead itself.
   const leadTarget =

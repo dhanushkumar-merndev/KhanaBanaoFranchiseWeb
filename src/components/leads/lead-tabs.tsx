@@ -132,6 +132,7 @@ export function LeadTabPanel({
       return (
         <AgreementTab
           leadId={lead.id}
+          leadStatus={lead.current_status}
           agreement={pipeline.agreement}
           isAdmin={isAdmin}
         />
@@ -141,6 +142,7 @@ export function LeadTabPanel({
         <PaymentTab
           leadId={lead.id}
           leadStatus={lead.current_status}
+          agreementStatus={pipeline.agreement?.status ?? null}
           payments={pipeline.payments}
           canRecord={active}
           isAdmin={isAdmin}

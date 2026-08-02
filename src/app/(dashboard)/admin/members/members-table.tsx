@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import * as Avatar from "@radix-ui/react-avatar";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import type { ColumnDef } from "@tanstack/react-table";
 import { MoreHorizontal, ShieldCheck, UserCheck, UserX } from "lucide-react";
@@ -23,6 +24,7 @@ export type MemberRowData = {
   acceptedLeads: number;
   /** The signed-in admin cannot deactivate their own account. */
   isSelf: boolean;
+  avatar_url?: string | null;
 };
 
 type PendingChange = { row: MemberRowData; next: "ACTIVE" | "INACTIVE" };
@@ -54,9 +56,16 @@ export function MembersTable({
         meta: { sortKey: "full_name" } satisfies ColumnMetaConfig,
         cell: ({ row }) => (
           <div className="flex items-center gap-2.5">
-            <span className="grid size-8 shrink-0 place-items-center rounded-full bg-brand-crimson/10 text-[0.7rem] font-bold text-brand-crimson">
-              {initialsOf(row.original.full_name)}
-            </span>
+            <Avatar.Root className="inline-flex size-8 select-none items-center justify-center overflow-hidden rounded-full align-middle bg-brand-crimson/10 shrink-0">
+              <Avatar.Image
+                className="size-full object-cover"
+                src={row.original.avatar_url || undefined}
+                alt={row.original.full_name}
+              />
+              <Avatar.Fallback className="text-[0.7rem] font-bold text-brand-crimson">
+                {initialsOf(row.original.full_name)}
+              </Avatar.Fallback>
+            </Avatar.Root>
             <div className="min-w-0">
               <p className="truncate font-medium text-ink">
                 {row.original.full_name}

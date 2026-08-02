@@ -88,9 +88,9 @@ export default async function DocumentUploadPage({
           Your documents
         </h1>
         <p className="mt-2 max-w-xl text-[0.85rem] leading-relaxed text-ink-soft">
-          Hello {lead.full_name.split(" ")[0]} — please upload the documents
-          below. You can come back to this link any time; each one saves as soon
-          as you upload it.
+          Hello {lead.full_name.split(" ")[0]} — choose the requested files
+          below, check them carefully, then submit them together for review.
+          Files are not uploaded until you press the final submit button.
         </p>
       </header>
 

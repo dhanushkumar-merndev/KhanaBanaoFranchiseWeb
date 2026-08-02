@@ -11,16 +11,49 @@ import {
 import { isAdmin } from "@/lib/domain/permissions";
 import { canTransition } from "@/lib/domain/transitions";
 import { sendTemplateEmail } from "@/lib/email/send";
+import {
+  createDirectUploadReceipt,
+  readDirectUploadReceipt,
+} from "@/lib/direct-upload-receipt";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
-  checkUpload,
+  ALLOWED_DOCUMENT_TYPES,
+  MAX_UPLOAD_BYTES,
   paymentProofPath,
   removeFile,
   signedUrlFor,
-  uploadFile,
 } from "@/lib/storage";
 import { formatCurrency } from "@/lib/utils";
 import type { ActionResult } from "@/lib/validation/result";
+
+const PAYMENT_ENTRY_STAGES = new Set([
+  "AGREEMENT_COMPLETED",
+  "PAYMENT_PENDING",
+  "PAYMENT_PROOF_SUBMITTED",
+  "PAYMENT_REJECTED",
+]);
+const PAYMENT_UPLOAD_PURPOSE = "PAYMENT_PROOF";
+const UPLOAD_RECEIPT_TTL_MS = 15 * 60 * 1000;
+
+export type PaymentProofMetadata = {
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+};
+
+function paymentProofMetadataError(file: PaymentProofMetadata): string | null {
+  if (!file.fileName.trim()) return "Choose a valid payment proof.";
+  if (!Number.isSafeInteger(file.fileSize) || file.fileSize <= 0) {
+    return "That file is empty.";
+  }
+  if (file.fileSize > MAX_UPLOAD_BYTES) {
+    return `That file is ${(file.fileSize / 1024 / 1024).toFixed(1)} MB. The limit is 10 MB.`;
+  }
+  if (!(ALLOWED_DOCUMENT_TYPES as readonly string[]).includes(file.mimeType)) {
+    return "Accepted formats are PDF, JPG, PNG and WebP.";
+  }
+  return null;
+}
 
 function refresh(leadId: string) {
   revalidatePath(`/admin/leads/${leadId}`);
@@ -48,6 +81,104 @@ async function guardLead(leadId: string) {
   return { ok: true as const, profile, lead };
 }
 
+async function guardPaymentEntry(leadId: string) {
+  const guard = await guardLead(leadId);
+  if (!guard.ok) return guard;
+
+  if (!PAYMENT_ENTRY_STAGES.has(guard.lead.current_status)) {
+    return {
+      ok: false as const,
+      message:
+        "Payment opens only after document review, franchise approval, and agreement completion.",
+    };
+  }
+
+  const { data: completedAgreement } = await createAdminClient()
+    .from("agreements")
+    .select("id")
+    .eq("lead_id", leadId)
+    .eq("status", "COMPLETED")
+    .order("version", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return completedAgreement
+    ? guard
+    : ({
+        ok: false as const,
+        message: "Complete the agreement before recording payment.",
+      } as const);
+}
+
+/** Returns a path-bound token; payment-proof bytes go browser → Supabase. */
+export async function preparePaymentProofUpload(
+  leadId: string,
+  file: PaymentProofMetadata,
+): Promise<
+  ActionResult<{ path: string; uploadToken: string; receipt: string }>
+> {
+  const guard = await guardPaymentEntry(leadId);
+  if (!guard.ok) return guard;
+
+  const metadataError = paymentProofMetadataError(file);
+  if (metadataError) {
+    return {
+      ok: false,
+      message: metadataError,
+      fieldErrors: { proof: metadataError },
+    };
+  }
+
+  const fileName = file.fileName.trim().slice(0, 200);
+  const path = paymentProofPath(leadId, fileName);
+  const { data, error } = await createAdminClient().storage
+    .from(STORAGE_BUCKETS.paymentProofs)
+    .createSignedUploadUrl(path);
+  if (error || !data?.token) {
+    return { ok: false, message: "Could not prepare the secure proof upload." };
+  }
+
+  const receipt = createDirectUploadReceipt({
+    purpose: PAYMENT_UPLOAD_PURPOSE,
+    bucket: STORAGE_BUCKETS.paymentProofs,
+    path,
+    ownerId: leadId,
+    actorId: guard.profile.id,
+    fileName,
+    fileSize: file.fileSize,
+    mimeType: file.mimeType,
+    expiresAt: Date.now() + UPLOAD_RECEIPT_TTL_MS,
+  });
+  return { ok: true, data: { path, uploadToken: data.token, receipt } };
+}
+
+export async function discardPaymentProofUpload(
+  leadId: string,
+  receipt: string,
+): Promise<ActionResult> {
+  const guard = await guardLead(leadId);
+  if (!guard.ok) return guard;
+
+  const upload = readDirectUploadReceipt(receipt, PAYMENT_UPLOAD_PURPOSE);
+  if (
+    !upload ||
+    upload.ownerId !== leadId ||
+    upload.actorId !== guard.profile.id ||
+    upload.bucket !== STORAGE_BUCKETS.paymentProofs
+  ) {
+    return { ok: false, message: "That upload confirmation is invalid." };
+  }
+
+  const supabase = createAdminClient();
+  const { data: registered } = await supabase
+    .from("payments")
+    .select("id")
+    .eq("proof_storage_path", upload.path)
+    .maybeSingle();
+  if (!registered) await removeFile(STORAGE_BUCKETS.paymentProofs, upload.path);
+  return { ok: true };
+}
+
 /**
  * Record the franchise fee and, optionally, its proof (spec §18).
  *
@@ -58,7 +189,7 @@ export async function recordPayment(
   leadId: string,
   formData: FormData,
 ): Promise<ActionResult<{ status: string }>> {
-  const guard = await guardLead(leadId);
+  const guard = await guardPaymentEntry(leadId);
   if (!guard.ok) return guard;
 
   const amount = Number(formData.get("amount"));
@@ -66,7 +197,7 @@ export async function recordPayment(
   const reference = String(formData.get("referenceNumber") ?? "").trim();
   const paymentDate = String(formData.get("paymentDate") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
-  const file = formData.get("proof");
+  const proofReceipt = String(formData.get("proofReceipt") ?? "");
 
   const fieldErrors: Record<string, string> = {};
 
@@ -85,23 +216,52 @@ export async function recordPayment(
   }
 
   const supabase = createAdminClient();
-  const hasProof = file instanceof File && file.size > 0;
-
+  const upload = proofReceipt
+    ? readDirectUploadReceipt(proofReceipt, PAYMENT_UPLOAD_PURPOSE)
+    : null;
   let proofPath: string | null = null;
   let proofName: string | null = null;
-
-  if (hasProof) {
-    const check = checkUpload(file);
-    if (!check.ok) {
-      return { ok: false, message: check.message, fieldErrors: { proof: check.message } };
+  if (proofReceipt) {
+    const invalid =
+      !upload ||
+      upload.ownerId !== leadId ||
+      upload.actorId !== guard.profile.id ||
+      upload.bucket !== STORAGE_BUCKETS.paymentProofs ||
+      upload.expiresAt < Date.now() ||
+      paymentProofMetadataError({
+        fileName: upload.fileName,
+        fileSize: upload.fileSize,
+        mimeType: upload.mimeType,
+      }) !== null;
+    if (invalid || !upload) {
+      return {
+        ok: false,
+        message: "The secure proof upload expired. Please choose the file again.",
+        fieldErrors: { proof: "Choose the payment proof again" },
+      };
     }
 
-    proofPath = paymentProofPath(leadId, file.name);
-    proofName = file.name.slice(0, 200);
+    const { data: object, error: objectError } = await supabase.storage
+      .from(STORAGE_BUCKETS.paymentProofs)
+      .info(upload.path);
+    if (
+      objectError ||
+      object?.size !== upload.fileSize ||
+      object.contentType !== upload.mimeType
+    ) {
+      await removeFile(STORAGE_BUCKETS.paymentProofs, upload.path);
+      return {
+        ok: false,
+        message: "The payment proof did not upload correctly. Please try again.",
+        fieldErrors: { proof: "Upload the proof again" },
+      };
+    }
 
-    const uploaded = await uploadFile(STORAGE_BUCKETS.paymentProofs, proofPath, file);
-    if (!uploaded.ok) return { ok: false, message: uploaded.message };
+    proofPath = upload.path;
+    proofName = upload.fileName;
   }
+
+  const hasProof = Boolean(proofPath);
 
   // Proof present means the member is asserting it was paid; without it the
   // record is a placeholder still awaiting evidence.
@@ -199,6 +359,12 @@ export async function approvePayment(
     .maybeSingle();
 
   if (!lead) return { ok: false, message: "That lead no longer exists." };
+  if (!canTransition(lead.current_status, "PAYMENT_APPROVED")) {
+    return {
+      ok: false,
+      message: "This lead is not waiting for payment approval.",
+    };
+  }
 
   await supabase
     .from("payments")
@@ -301,6 +467,12 @@ export async function rejectPayment(
     .maybeSingle();
 
   if (!lead) return { ok: false, message: "That lead no longer exists." };
+  if (!canTransition(lead.current_status, "PAYMENT_REJECTED")) {
+    return {
+      ok: false,
+      message: "This lead is not waiting for payment-proof review.",
+    };
+  }
 
   await supabase
     .from("payments")

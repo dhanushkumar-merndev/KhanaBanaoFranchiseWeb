@@ -10,7 +10,7 @@
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values
   ('franchise-documents',  'franchise-documents',  false, 10485760,
-     array['application/pdf','image/jpeg','image/jpg','image/png']),
+     array['application/pdf','image/jpeg','image/jpg','image/png','image/webp']),
   ('payment-proofs',       'payment-proofs',       false, 10485760,
      array['application/pdf','image/jpeg','image/jpg','image/png']),
   ('franchise-agreements', 'franchise-agreements', false, 20971520,
@@ -22,9 +22,9 @@ values
 on conflict (id) do nothing;
 
 -- -------------------------------------------------------------------
--- Storage access. Applicants never authenticate, so their uploads go
--- through a server route using the service role after token validation —
--- these policies only cover signed-in staff.
+-- Storage access. Applicants never authenticate, so the server validates their
+-- secure link and issues path-bound signed upload URLs. These policies only
+-- cover signed-in staff; signed upload tokens need no applicant RLS policy.
 -- -------------------------------------------------------------------
 
 create policy "staff read franchise files"

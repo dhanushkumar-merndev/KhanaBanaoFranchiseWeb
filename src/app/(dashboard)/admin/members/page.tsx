@@ -71,7 +71,7 @@ export default async function MembersPage({
         {tab === "members" ? (
           <MembersSection
             params={params}
-            currentProfileId={profile.id}
+            currentProfile={profile}
             inviteButton={inviteButton}
           />
         ) : (
@@ -89,16 +89,17 @@ type SectionProps = {
 
 async function MembersSection({
   params,
-  currentProfileId,
+  currentProfile,
   inviteButton,
-}: SectionProps & { currentProfileId: string }) {
+}: SectionProps & { currentProfile: import("@/lib/auth/session").SessionProfile }) {
   const { rows, total } = await listMembers(params);
 
   return (
     <MembersTable
       rows={rows.map((member) => ({
         ...member,
-        isSelf: member.id === currentProfileId,
+        isSelf: member.id === currentProfile.id,
+        avatar_url: member.id === currentProfile.id ? currentProfile.avatar_url : null,
       }))}
       total={total}
       page={params.page}

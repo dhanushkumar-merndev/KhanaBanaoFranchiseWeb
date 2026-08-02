@@ -106,6 +106,7 @@ export type LeafProps = {
   /** Static rotation, degrees. */
   rotate?: number;
   flip?: boolean;
+  flipY?: boolean;
   /** Gentle idle sway on top of the parallax. */
   sway?: boolean;
   swayDelay?: number;
@@ -120,6 +121,7 @@ export function Leaf({
   speed = 0.1,
   rotate = 0,
   flip = false,
+  flipY = false,
   sway = true,
   swayDelay = 0,
   opacity = 1,
@@ -149,6 +151,8 @@ export function Leaf({
       style={
         {
           "--leaf-rot": `${rotate}deg`,
+          "--leaf-scale-x": flip ? -1 : 1,
+          "--leaf-scale-y": flipY ? -1 : 1,
           opacity,
         } as React.CSSProperties
       }
@@ -167,7 +171,6 @@ export function Leaf({
         style={
           {
             "--leaf-delay": `${swayDelay}s`,
-            transform: flip ? "scaleX(-1)" : undefined,
           } as React.CSSProperties
         }
       />

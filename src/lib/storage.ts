@@ -1,5 +1,6 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { STORAGE_BUCKETS } from "@/lib/domain/enums";
 
@@ -77,11 +78,11 @@ export function documentPath(
   version: number,
   fileName: string,
 ): string {
-  return `applications/${applicationId}/${documentType}/v${version}-${Date.now()}-${safeFileName(fileName)}`;
+  return `applications/${applicationId}/${documentType}/v${version}-${Date.now()}-${randomUUID()}-${safeFileName(fileName)}`;
 }
 
 export function paymentProofPath(leadId: string, fileName: string): string {
-  return `leads/${leadId}/${Date.now()}-${safeFileName(fileName)}`;
+  return `leads/${leadId}/${Date.now()}-${randomUUID()}-${safeFileName(fileName)}`;
 }
 
 export function agreementPath(
@@ -89,7 +90,7 @@ export function agreementPath(
   version: number,
   fileName: string,
 ): string {
-  return `leads/${leadId}/v${version}-${Date.now()}-${safeFileName(fileName)}`;
+  return `leads/${leadId}/v${version}-${Date.now()}-${randomUUID()}-${safeFileName(fileName)}`;
 }
 
 export function approvalLetterPath(
