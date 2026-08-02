@@ -46,6 +46,16 @@ export const metadata: Metadata = {
       "Premium event, wedding and corporate catering — built on a proven, fully-supported system.",
     type: "website",
   },
+  // App Router emits the <link> tags from here rather than from JSX in the
+  // document head, so metadata stays in one place and Next can dedupe it.
+  icons: {
+    icon: [
+      { url: "/favicon-32x32.png", type: "image/png", sizes: "32x32" },
+      { url: "/favicon-16x16.png", type: "image/png", sizes: "16x16" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+  },
+  manifest: "/site.webmanifest",
   robots: { index: true, follow: true },
 };
 
