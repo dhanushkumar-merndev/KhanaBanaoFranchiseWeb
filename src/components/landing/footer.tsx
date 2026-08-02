@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Mail, MapPin, Phone } from "lucide-react";
 import { ContactAction } from "@/components/contact/contact-action";
@@ -27,11 +26,14 @@ export function Footer() {
 
       <div className="shell relative grid gap-10 pb-12 md:grid-cols-[1.4fr_1fr_1.2fr]">
         <div>
-          <Image
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src={images.logo}
             alt={`${site.name} — ${site.tagline}`}
             width={images.logoWidth}
             height={images.logoHeight}
+            loading="lazy"
+            decoding="async"
             className="h-12 w-auto"
           />
           <p className="mt-4 max-w-sm text-[0.88rem] leading-relaxed text-ink-soft">

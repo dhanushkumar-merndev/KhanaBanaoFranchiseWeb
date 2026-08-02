@@ -68,7 +68,7 @@ function agreementMetadataError(file: AgreementUploadMetadata): string | null {
     return "That file is empty.";
   }
   if (file.fileSize > MAX_AGREEMENT_BYTES) {
-    return `That file is ${(file.fileSize / 1024 / 1024).toFixed(1)} MB. The limit is 20 MB.`;
+    return `That file is ${(file.fileSize / 1024 / 1024).toFixed(1)} MB. The limit is ${MAX_AGREEMENT_BYTES / 1024 / 1024} MB.`;
   }
   if (!(ALLOWED_AGREEMENT_TYPES as readonly string[]).includes(file.mimeType)) {
     return "Only PDF files are accepted here.";

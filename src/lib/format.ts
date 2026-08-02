@@ -91,13 +91,6 @@ export function formatRelative(
   return "just now";
 }
 
-/** True when the timestamp falls on today's date in IST. */
-export function isToday(value: string | Date | null | undefined): boolean {
-  const date = toDate(value);
-  if (!date) return false;
-  return dateFmt.format(date) === dateFmt.format(new Date());
-}
-
 /**
  * `<input type="datetime-local">` bridging.
  *
@@ -112,7 +105,7 @@ export function localInputToIso(value: string): string {
   return Number.isNaN(date.getTime()) ? "" : date.toISOString();
 }
 
-export function isoToLocalInput(value: string | Date | null | undefined): string {
+function isoToLocalInput(value: string | Date | null | undefined): string {
   const date = toDate(value);
   if (!date) return "";
   const offset = date.getTimezoneOffset() * 60_000;

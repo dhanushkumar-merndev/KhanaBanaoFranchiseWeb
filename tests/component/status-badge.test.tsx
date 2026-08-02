@@ -2,7 +2,11 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { Badge, StatusBadge } from "@/components/ui/badge";
 import { LEAD_STATUSES, LEAD_STATUS_LABELS } from "@/lib/domain/enums";
-import { leadStatusTone } from "@/lib/domain/status";
+import {
+  leadPipelineLabel,
+  leadPipelineTone,
+  leadStatusTone,
+} from "@/lib/domain/status";
 
 describe("StatusBadge", () => {
   it("renders the label as text", () => {
@@ -35,6 +39,21 @@ describe("StatusBadge", () => {
         /^(neutral|info|progress|warn|success|danger)$/,
       );
     }
+  });
+
+  it("shows action-oriented phases in the leads table", () => {
+    expect(leadPipelineLabel("DOCUMENTS_APPROVED")).toBe(
+      "Agreement in process",
+    );
+    expect(leadPipelineLabel("AGREEMENT_COMPLETED")).toBe(
+      "Training pending",
+    );
+    expect(leadPipelineLabel("PAYMENT_APPROVED")).toBe(
+      "Training in process",
+    );
+    expect(leadPipelineLabel("TRAINING_COMPLETED")).toBe("Franchise setup");
+    expect(leadPipelineLabel("LIVE")).toBe("Franchise owner");
+    expect(leadPipelineTone("PAYMENT_REJECTED")).toBe("danger");
   });
 
   it("renders a plain badge with its children", () => {

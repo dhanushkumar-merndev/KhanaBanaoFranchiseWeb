@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { ArrowRight, Crown, Play } from "lucide-react";
 import { Leaf } from "@/components/decor/leaf";
 import { HeroHeading } from "@/components/landing/hero-heading";
@@ -109,13 +108,14 @@ export function Hero() {
             />
 
             <div className="hero-frame relative size-full overflow-hidden shadow-[0_40px_80px_-40px_rgba(110,40,20,0.55)] ring-1 ring-brand-gold/25">
-              <Image
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src={images.heroFeast}
                 alt="A Khana Banao catering spread — handis of biryani, curries and rice served at an event"
-                fill
-                priority
-                sizes="(max-width: 1024px) 92vw, 46vw"
-                className="object-cover"
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
+                className="absolute inset-0 size-full object-cover"
               />
               <div
                 aria-hidden="true"

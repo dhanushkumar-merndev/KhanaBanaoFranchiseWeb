@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 
 /** Named slots used by `src/lib/site.ts` so copy stays free of imports. */
-export const iconMap = {
+const iconMap = {
   shield: ShieldCheck,
   sparkles: Sparkles,
   wallet: Wallet,

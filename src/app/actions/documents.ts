@@ -5,7 +5,10 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin, requireProfile } from "@/lib/auth/session";
 import { resolveToken } from "@/lib/data/tokens";
 import { hasDocumentAccess } from "@/lib/document-otp";
-import { overallDocumentStatus } from "@/lib/domain/documents";
+import {
+  canApplyDocumentRollup,
+  overallDocumentStatus,
+} from "@/lib/domain/documents";
 import {
   DOCUMENT_TYPES,
   DOCUMENT_TYPE_LABELS,
@@ -16,7 +19,6 @@ import {
   type LeadStatus,
 } from "@/lib/domain/enums";
 import { isAdmin } from "@/lib/domain/permissions";
-import { canTransition } from "@/lib/domain/transitions";
 import { sendTemplateEmail } from "@/lib/email/send";
 import { appUrl, documentTokenSecret } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -65,26 +67,12 @@ async function syncDocumentStatus(applicationId: string, leadId: string) {
   if (!lead) return target;
 
   const from = lead.current_status as LeadStatus;
-  const documentStages = new Set<LeadStatus>([
-    "DOCUMENTS_PENDING",
-    "DOCUMENTS_PARTIALLY_SUBMITTED",
-    "DOCUMENTS_UNDER_REVIEW",
-    "DOCUMENT_CORRECTION_REQUIRED",
-    "DOCUMENTS_APPROVED",
-  ]);
-
   // These statuses are a roll-up of the request rows, not a manually chosen
   // pipeline jump. For example, approving the final outstanding document can
   // legitimately recalculate PARTIALLY_SUBMITTED straight to APPROVED. The
   // ordinary transition map rejects that skipped display state, which left the
   // lead stale even though every underlying request was approved.
-  const isDocumentRollupCorrection =
-    documentStages.has(from) && documentStages.has(target);
-
-  if (
-    from !== target &&
-    (canTransition(from, target) || isDocumentRollupCorrection)
-  ) {
+  if (from !== target && canApplyDocumentRollup(from, target)) {
     await supabase
       .from("leads")
       .update({ current_status: target })
@@ -156,7 +144,9 @@ export async function requestDocuments(
 
   const { data: lead } = await supabase
     .from("leads")
-    .select("id, lead_number, full_name, email, current_status, assigned_member_id")
+    .select(
+      "id, lead_number, full_name, email, current_status, assigned_member_id",
+    )
     .eq("id", leadId)
     .maybeSingle();
 
@@ -170,7 +160,8 @@ export async function requestDocuments(
   ) {
     return {
       ok: false,
-      message: "Documents cannot be added after the franchise has been approved.",
+      message:
+        "Documents cannot be added after the franchise has been approved.",
     };
   }
 
@@ -183,7 +174,8 @@ export async function requestDocuments(
   if (!application) {
     return {
       ok: false,
-      message: "Send the application link first — documents hang off the application.",
+      message:
+        "Send the application link first — documents hang off the application.",
     };
   }
 
@@ -260,7 +252,10 @@ export async function cancelDocumentRequest(
 
   if (!request) return { ok: false, message: "That request no longer exists." };
   if (request.status === "APPROVED") {
-    return { ok: false, message: "An approved document cannot be un-requested." };
+    return {
+      ok: false,
+      message: "An approved document cannot be un-requested.",
+    };
   }
 
   const { data: application } = await supabase
@@ -291,6 +286,100 @@ export async function cancelDocumentRequest(
   }
 
   return { ok: true };
+}
+
+/**
+ * Permanently removes every uploaded version for one requested document while
+ * keeping the request open. A fresh secure upload link is returned so the
+ * applicant can supply a replacement.
+ */
+export async function deleteDocument(
+  documentId: string,
+): Promise<ActionResult<{ url: string }>> {
+  const profile = await requireAdmin();
+  const supabase = createAdminClient();
+
+  const { data: document } = await supabase
+    .from("documents")
+    .select("id, document_request_id, application_id, document_type, file_name")
+    .eq("id", documentId)
+    .maybeSingle();
+
+  if (!document) {
+    return { ok: false, message: "That document no longer exists." };
+  }
+
+  const [{ data: application }, { data: versions }] = await Promise.all([
+    supabase
+      .from("applications")
+      .select("lead_id")
+      .eq("id", document.application_id)
+      .maybeSingle(),
+    supabase
+      .from("documents")
+      .select("id, storage_path")
+      .eq("document_request_id", document.document_request_id),
+  ]);
+
+  if (!application) {
+    return { ok: false, message: "That application no longer exists." };
+  }
+
+  const { data: lead } = await supabase
+    .from("leads")
+    .select("lead_number, current_status")
+    .eq("id", application.lead_id)
+    .maybeSingle();
+
+  if (!lead) return { ok: false, message: "That lead no longer exists." };
+  if (
+    LEAD_STATUSES.indexOf(lead.current_status) >=
+    LEAD_STATUSES.indexOf("FRANCHISE_APPROVED")
+  ) {
+    return {
+      ok: false,
+      message:
+        "Documents cannot be deleted after franchise approval. Revoke the later workflow first.",
+    };
+  }
+
+  const { error: deleteError } = await supabase
+    .from("documents")
+    .delete()
+    .eq("document_request_id", document.document_request_id);
+
+  if (deleteError) return { ok: false, message: deleteError.message };
+
+  const { error: requestError } = await supabase
+    .from("document_requests")
+    .update({ status: "REQUESTED" })
+    .eq("id", document.document_request_id);
+
+  if (requestError) return { ok: false, message: requestError.message };
+
+  await Promise.all(
+    (versions ?? []).map((version) =>
+      removeFile(STORAGE_BUCKETS.documents, version.storage_path),
+    ),
+  );
+
+  await syncDocumentStatus(document.application_id, application.lead_id);
+  const url = await issueDocumentToken(
+    application.lead_id,
+    document.application_id,
+    profile.id,
+  );
+
+  await supabase.from("activity_logs").insert({
+    actor_id: profile.id,
+    entity_type: "document",
+    entity_id: document.id,
+    action: "DOCUMENT_DELETED",
+    summary: `Deleted all uploaded versions of ${DOCUMENT_TYPE_LABELS[document.document_type]} for ${lead.lead_number}.`,
+  });
+
+  refresh(application.lead_id);
+  return { ok: true, data: { url } };
 }
 
 // -------------------------------------------------------------------
@@ -329,7 +418,7 @@ function validateUploadMetadata(file: DocumentUploadMetadata): string | null {
     return "That file is empty.";
   }
   if (file.fileSize > MAX_UPLOAD_BYTES) {
-    return `That file is ${(file.fileSize / 1024 / 1024).toFixed(1)} MB. The limit is 10 MB.`;
+    return `That file is ${(file.fileSize / 1024 / 1024).toFixed(1)} MB. The limit is ${MAX_UPLOAD_BYTES / 1024 / 1024} MB.`;
   }
   if (!(ALLOWED_DOCUMENT_TYPES as readonly string[]).includes(file.mimeType)) {
     return "Accepted formats are PDF, JPG, PNG and WebP.";
@@ -378,7 +467,9 @@ function readUploadReceipt(receipt: string): UploadReceiptPayload | null {
       typeof payload.version !== "number" ||
       typeof payload.tokenId !== "string" ||
       typeof payload.expiresAt !== "number" ||
-      !(DOCUMENT_TYPES as readonly string[]).includes(payload.documentType ?? "")
+      !(DOCUMENT_TYPES as readonly string[]).includes(
+        payload.documentType ?? "",
+      )
     ) {
       return null;
     }
@@ -396,14 +487,19 @@ async function removePreparedObjects(payloads: UploadReceiptPayload[]) {
   );
 }
 
-async function removeUnregisteredPreparedObjects(payloads: UploadReceiptPayload[]) {
+async function removeUnregisteredPreparedObjects(
+  payloads: UploadReceiptPayload[],
+) {
   if (payloads.length === 0) return;
 
   const supabase = createAdminClient();
   const { data: registered } = await supabase
     .from("documents")
     .select("storage_path")
-    .in("storage_path", payloads.map((payload) => payload.path));
+    .in(
+      "storage_path",
+      payloads.map((payload) => payload.path),
+    );
   const registeredPaths = new Set(
     (registered ?? []).map((document) => document.storage_path),
   );
@@ -421,9 +517,13 @@ export async function prepareDocumentUploads(
   files: DocumentUploadMetadata[],
 ): Promise<ActionResult<{ uploads: PreparedDocumentUpload[] }>> {
   const resolved = await resolveToken(token, "DOCUMENTS");
-  if (!resolved.ok) return { ok: false, message: "This link is no longer valid." };
+  if (!resolved.ok)
+    return { ok: false, message: "This link is no longer valid." };
   if (!(await hasDocumentAccess(resolved.data.tokenId))) {
-    return { ok: false, message: "Verify your email before uploading documents." };
+    return {
+      ok: false,
+      message: "Verify your email before uploading documents.",
+    };
   }
   if (!resolved.data.applicationId) {
     return { ok: false, message: "That application no longer exists." };
@@ -442,7 +542,10 @@ export async function prepareDocumentUploads(
 
   const outstanding = requests ?? [];
   if (outstanding.length === 0) {
-    return { ok: false, message: "All requested documents have already been submitted." };
+    return {
+      ok: false,
+      message: "All requested documents have already been submitted.",
+    };
   }
 
   const submittedIds = files.map((file) => file.requestId);
@@ -455,7 +558,9 @@ export async function prepareDocumentUploads(
     return { ok: false, message: "Choose a file for every document first." };
   }
 
-  const metadataByRequest = new Map(files.map((file) => [file.requestId, file]));
+  const metadataByRequest = new Map(
+    files.map((file) => [file.requestId, file]),
+  );
   for (const request of outstanding) {
     const file = metadataByRequest.get(request.id)!;
     const error = validateUploadMetadata(file);
@@ -533,9 +638,13 @@ export async function finalizeDocumentUploads(
   receipts: string[],
 ): Promise<ActionResult<{ count: number }>> {
   const resolved = await resolveToken(token, "DOCUMENTS");
-  if (!resolved.ok) return { ok: false, message: "This link is no longer valid." };
+  if (!resolved.ok)
+    return { ok: false, message: "This link is no longer valid." };
   if (!(await hasDocumentAccess(resolved.data.tokenId))) {
-    return { ok: false, message: "Verify your email before uploading documents." };
+    return {
+      ok: false,
+      message: "Verify your email before uploading documents.",
+    };
   }
   if (!resolved.data.applicationId) {
     return { ok: false, message: "That application no longer exists." };
@@ -558,7 +667,10 @@ export async function finalizeDocumentUploads(
         validateUploadMetadata(upload) !== null,
     )
   ) {
-    return { ok: false, message: "The secure upload expired. Please try again." };
+    return {
+      ok: false,
+      message: "The secure upload expired. Please try again.",
+    };
   }
 
   const supabase = createAdminClient();
@@ -570,17 +682,23 @@ export async function finalizeDocumentUploads(
     .order("requested_at");
 
   const outstanding = requests ?? [];
-  const expectedById = new Map(outstanding.map((request) => [request.id, request]));
+  const expectedById = new Map(
+    outstanding.map((request) => [request.id, request]),
+  );
   if (
     uploads.length !== outstanding.length ||
-    new Set(uploads.map((upload) => upload.requestId)).size !== uploads.length ||
+    new Set(uploads.map((upload) => upload.requestId)).size !==
+      uploads.length ||
     uploads.some((upload) => {
       const request = expectedById.get(upload.requestId);
       return !request || request.document_type !== upload.documentType;
     })
   ) {
     await removeUnregisteredPreparedObjects(uploads);
-    return { ok: false, message: "The requested document list changed. Please try again." };
+    return {
+      ok: false,
+      message: "The requested document list changed. Please try again.",
+    };
   }
 
   const requestIds = outstanding.map((request) => request.id);
@@ -597,7 +715,8 @@ export async function finalizeDocumentUploads(
   }
   if (
     uploads.some(
-      (upload) => upload.version !== (latestVersion.get(upload.requestId) ?? 0) + 1,
+      (upload) =>
+        upload.version !== (latestVersion.get(upload.requestId) ?? 0) + 1,
     )
   ) {
     await removeUnregisteredPreparedObjects(uploads);
@@ -621,7 +740,8 @@ export async function finalizeDocumentUploads(
     await removeUnregisteredPreparedObjects(uploads);
     return {
       ok: false,
-      message: "One or more files did not upload correctly. Please choose them again.",
+      message:
+        "One or more files did not upload correctly. Please choose them again.",
     };
   }
 
@@ -656,7 +776,10 @@ export async function finalizeDocumentUploads(
     await supabase
       .from("documents")
       .delete()
-      .in("id", (inserted ?? []).map((document) => document.id));
+      .in(
+        "id",
+        (inserted ?? []).map((document) => document.id),
+      );
     await removeUnregisteredPreparedObjects(uploads);
     return { ok: false, message: updateError.message };
   }
@@ -676,7 +799,10 @@ export async function discardDocumentUploads(
     return { ok: false, message: "This link is no longer valid." };
   }
   if (!(await hasDocumentAccess(resolved.data.tokenId))) {
-    return { ok: false, message: "Verify your email before uploading documents." };
+    return {
+      ok: false,
+      message: "Verify your email before uploading documents.",
+    };
   }
 
   const payloads = receipts
@@ -712,7 +838,8 @@ export async function approveDocument(
     .eq("id", documentId)
     .maybeSingle();
 
-  if (!document) return { ok: false, message: "That document no longer exists." };
+  if (!document)
+    return { ok: false, message: "That document no longer exists." };
   if (document.status === "APPROVED") {
     return { ok: false, message: "That document is already approved." };
   }
@@ -812,7 +939,8 @@ export async function requestDocumentReupload(
     .eq("id", documentId)
     .maybeSingle();
 
-  if (!document) return { ok: false, message: "That document no longer exists." };
+  if (!document)
+    return { ok: false, message: "That document no longer exists." };
 
   const now = new Date().toISOString();
 
@@ -844,7 +972,8 @@ export async function requestDocumentReupload(
     .eq("id", document.application_id)
     .maybeSingle();
 
-  if (!application) return { ok: false, message: "That application no longer exists." };
+  if (!application)
+    return { ok: false, message: "That application no longer exists." };
 
   await syncDocumentStatus(document.application_id, application.lead_id);
 
@@ -907,7 +1036,8 @@ export async function addDocumentReviewNote(
     .eq("id", documentId)
     .maybeSingle();
 
-  if (!document) return { ok: false, message: "That document no longer exists." };
+  if (!document)
+    return { ok: false, message: "That document no longer exists." };
 
   // A note is a comment, not a decision — the status is recorded as-is.
   await supabase.from("document_reviews").insert({
@@ -941,7 +1071,8 @@ export async function getDocumentUrl(
     .eq("id", documentId)
     .maybeSingle();
 
-  if (!document) return { ok: false, message: "That document no longer exists." };
+  if (!document)
+    return { ok: false, message: "That document no longer exists." };
 
   if (!isAdmin(profile.role)) {
     const { data: application } = await supabase
@@ -964,9 +1095,13 @@ export async function getDocumentUrl(
   }
 
   const { signedUrlFor } = await import("@/lib/storage");
-  const url = await signedUrlFor(STORAGE_BUCKETS.documents, document.storage_path, {
-    download: download ? document.file_name : undefined,
-  });
+  const url = await signedUrlFor(
+    STORAGE_BUCKETS.documents,
+    document.storage_path,
+    {
+      download: download ? document.file_name : undefined,
+    },
+  );
 
   return url
     ? { ok: true, data: { url } }

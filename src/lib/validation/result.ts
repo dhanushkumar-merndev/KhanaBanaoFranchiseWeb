@@ -10,7 +10,7 @@ export type ActionResult<T = undefined> =
   | { ok: false; message: string; fieldErrors?: Record<string, string> };
 
 /** Flattens Zod issues into `{ fieldName: firstMessage }` for the form. */
-export function fieldErrorsFrom(
+function fieldErrorsFrom(
   issues: readonly { path: readonly PropertyKey[]; message: string }[],
 ): Record<string, string> {
   const errors: Record<string, string> = {};
@@ -27,13 +27,4 @@ export function invalid(
   message = "Please check the highlighted fields.",
 ): ActionResult<never> {
   return { ok: false, message, fieldErrors: fieldErrorsFrom(issues) };
-}
-
-/** Normalises an unknown thrown value into a user-facing message. */
-export function failure(error: unknown, fallback: string): ActionResult<never> {
-  if (error && typeof error === "object" && "message" in error) {
-    const message = String((error as { message: unknown }).message);
-    if (message) return { ok: false, message };
-  }
-  return { ok: false, message: fallback };
 }

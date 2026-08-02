@@ -54,7 +54,7 @@ export function Checkbox({ className, ...props }: React.ComponentProps<"input">)
   );
 }
 
-export function FieldError({
+function FieldError({
   id,
   children,
 }: {
@@ -69,7 +69,7 @@ export function FieldError({
   );
 }
 
-export function FieldHint({ children }: { children: React.ReactNode }) {
+function FieldHint({ children }: { children: React.ReactNode }) {
   return <p className="mt-1.5 text-[0.72rem] text-ink-soft">{children}</p>;
 }
 

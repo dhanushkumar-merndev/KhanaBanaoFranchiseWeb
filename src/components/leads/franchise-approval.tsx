@@ -21,6 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Field, Input, Textarea } from "@/components/ui/field";
+import { MAX_DOCUMENT_UPLOAD_MB } from "@/lib/upload-limits";
 
 function Gate({ met, label }: { met: boolean; label: string }) {
   return (
@@ -221,7 +222,7 @@ function ApproveFranchiseDialog({
                   label="Approval letter"
                   htmlFor="doc-ap-letter"
                   error={errors.letter}
-                  hint="PDF, optional."
+                  hint={`PDF up to ${MAX_DOCUMENT_UPLOAD_MB} MB, optional.`}
                 >
                   <Input
                     id="doc-ap-letter"

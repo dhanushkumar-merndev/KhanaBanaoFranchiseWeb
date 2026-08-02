@@ -10,7 +10,6 @@ import {
   normalizePhone,
   normalizeText,
 } from "@/lib/domain/normalize";
-import { sendTemplateEmail } from "@/lib/email/send";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   businessDiscussionSchema,
@@ -705,28 +704,4 @@ async function refreshNextFollowup(leadId: string) {
     .from("leads")
     .update({ next_followup_at: soonest?.due_at ?? null })
     .eq("id", leadId);
-}
-
-/** Re-sends the acknowledgement a website enquiry produces. */
-export async function resendEnquiryAcknowledgement(
-  leadId: string,
-): Promise<ActionResult> {
-  const guard = await guardLead(leadId);
-  if (isGuardFailure(guard)) return guard;
-
-  const result = await sendTemplateEmail({
-    templateKey: "ENQUIRY_RECEIVED",
-    to: { email: guard.lead.email, name: guard.lead.full_name },
-    vars: {
-      applicant_name: guard.lead.full_name,
-      lead_number: guard.lead.lead_number,
-    },
-    leadId,
-    triggeredBy: guard.profile.id,
-  });
-
-  refreshLead(leadId);
-  return result.status === "SENT"
-    ? { ok: true }
-    : { ok: false, message: "The email could not be sent. Check the email logs." };
 }

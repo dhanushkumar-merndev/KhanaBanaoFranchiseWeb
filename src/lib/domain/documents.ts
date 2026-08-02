@@ -1,4 +1,13 @@
 import type { DocumentStatus, LeadStatus } from "./enums";
+import { canTransition } from "./transitions";
+
+const DOCUMENT_LEAD_STAGES = new Set<LeadStatus>([
+  "DOCUMENTS_PENDING",
+  "DOCUMENTS_PARTIALLY_SUBMITTED",
+  "DOCUMENTS_UNDER_REVIEW",
+  "DOCUMENT_CORRECTION_REQUIRED",
+  "DOCUMENTS_APPROVED",
+]);
 
 /**
  * Roll a set of per-document statuses up into the lead-level document status.
@@ -35,13 +44,28 @@ export function overallDocumentStatus(
   return "DOCUMENTS_UNDER_REVIEW";
 }
 
+/**
+ * Document status is an aggregate, so it may legitimately skip intermediate
+ * display stages when several files are reviewed before the lead refreshes.
+ */
+export function canApplyDocumentRollup(
+  from: LeadStatus,
+  target: LeadStatus,
+): boolean {
+  return (
+    canTransition(from, target) ||
+    (DOCUMENT_LEAD_STAGES.has(target) &&
+      (DOCUMENT_LEAD_STAGES.has(from) || from === "APPLICATION_UNDER_REVIEW"))
+  );
+}
+
 /** Approved documents are locked — the applicant cannot replace them. */
 export function isDocumentLocked(status: DocumentStatus): boolean {
   return status === "APPROVED";
 }
 
 /** Which documents an applicant is allowed to upload against right now. */
-export function uploadableStatuses(): readonly DocumentStatus[] {
+function uploadableStatuses(): readonly DocumentStatus[] {
   return ["REQUESTED", "REUPLOAD_REQUIRED"];
 }
 

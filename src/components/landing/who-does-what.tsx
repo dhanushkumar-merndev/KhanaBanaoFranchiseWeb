@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { Check } from "lucide-react";
 import { Leaf } from "@/components/decor/leaf";
 import { SectionHeading } from "@/components/landing/section-heading";
@@ -73,11 +72,14 @@ export function WhoDoesWhat() {
               <div className="flex justify-center md:px-2">
                 <span className="grid size-28 place-items-center rounded-full border-2 border-dashed border-brand-gold/50 bg-surface p-3 shadow-[0_16px_36px_-24px_rgba(110,40,20,0.7)] md:size-36">
                   <span className="grid size-full place-items-center rounded-full bg-surface-muted/60 p-5">
-                    <Image
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
                       src="/decor/handshake.svg"
                       alt=""
                       width={120}
                       height={90}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full"
                       aria-hidden="true"
                     />

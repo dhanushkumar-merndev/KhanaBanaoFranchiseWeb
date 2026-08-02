@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import { ContactAction } from "@/components/contact/contact-action";
 import { images, site } from "@/lib/site";
 
@@ -19,13 +18,16 @@ export default function FranchiseLayout({
     <div className="flex min-h-dvh flex-col bg-canvas">
       <header className="border-b border-line bg-surface">
         <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3.5">
-          <Image
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src={images.logo}
             alt={site.name}
             width={images.logoWidth}
             height={images.logoHeight}
             className="h-9 w-auto"
-            priority
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
           />
         </div>
       </header>

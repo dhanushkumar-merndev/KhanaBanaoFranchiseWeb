@@ -50,6 +50,7 @@ export default async function AdminLeadsPage({
           sort={params.sort}
           dir={params.dir}
           basePath="/admin/leads"
+          adminActions
           memberOptions={members.map((member) => ({
             value: member.id,
             label: member.full_name,

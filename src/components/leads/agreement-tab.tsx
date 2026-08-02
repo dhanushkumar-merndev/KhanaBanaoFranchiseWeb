@@ -29,6 +29,10 @@ import {
 import { formatDateTime } from "@/lib/format";
 import type { AgreementDetail } from "@/lib/data/pipeline";
 import { createClient } from "@/lib/supabase/client";
+import {
+  MAX_DOCUMENT_UPLOAD_BYTES,
+  MAX_DOCUMENT_UPLOAD_MB,
+} from "@/lib/upload-limits";
 
 /** The stage after the current one — agreements only ever move forward. */
 function nextStatus(current: AgreementStatus): AgreementStatus | null {
@@ -293,7 +297,16 @@ function UploadAgreementButton({
         type="file"
         accept="application/pdf"
         className="sr-only"
-        onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+        onChange={(event) => {
+          const selected = event.target.files?.[0] ?? null;
+          if (selected && selected.size > MAX_DOCUMENT_UPLOAD_BYTES) {
+            toast.error(`The agreement must be ${MAX_DOCUMENT_UPLOAD_MB} MB or smaller.`);
+            event.target.value = "";
+            setFile(null);
+            return;
+          }
+          setFile(selected);
+        }}
       />
       <Button
         size="sm"
@@ -301,7 +314,7 @@ function UploadAgreementButton({
         onClick={() => inputRef.current?.click()}
       >
         <Upload />
-        {replace ? "Replace" : "Upload agreement"}
+        {replace ? "Replace" : `Upload agreement (max ${MAX_DOCUMENT_UPLOAD_MB} MB)`}
       </Button>
 
       {file && (
@@ -368,7 +381,7 @@ function UploadAgreementButton({
           <div className="space-y-3">
             <p className="text-[0.82rem] text-ink-soft">
               <span className="font-medium text-ink">{file.name}</span> — PDF only,
-              up to 20&nbsp;MB.
+              up to {MAX_DOCUMENT_UPLOAD_MB}&nbsp;MB.
             </p>
             <Field label="Notes" htmlFor="agreement-upload-notes">
               <Textarea

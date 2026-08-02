@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Menu, Phone, X } from "lucide-react";
 import { ContactAction } from "@/components/contact/contact-action";
@@ -75,12 +74,15 @@ export function Header() {
     >
       <div className="shell flex h-16 items-center justify-between gap-4 md:h-20">
         <a href={onLanding ? "#home" : "/"} className="relative z-10 flex shrink-0 items-center" aria-label={`${site.name} home`}>
-          <Image
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src={images.logo}
             alt={`${site.name} — ${site.tagline}`}
             width={images.logoWidth}
             height={images.logoHeight}
-            priority
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
             className="h-9 w-auto md:h-11"
           />
         </a>

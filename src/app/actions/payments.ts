@@ -47,7 +47,7 @@ function paymentProofMetadataError(file: PaymentProofMetadata): string | null {
     return "That file is empty.";
   }
   if (file.fileSize > MAX_UPLOAD_BYTES) {
-    return `That file is ${(file.fileSize / 1024 / 1024).toFixed(1)} MB. The limit is 10 MB.`;
+    return `That file is ${(file.fileSize / 1024 / 1024).toFixed(1)} MB. The limit is ${MAX_UPLOAD_BYTES / 1024 / 1024} MB.`;
   }
   if (!(ALLOWED_DOCUMENT_TYPES as readonly string[]).includes(file.mimeType)) {
     return "Accepted formats are PDF, JPG, PNG and WebP.";

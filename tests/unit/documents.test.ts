@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  canApplyDocumentRollup,
   canApplicantUpload,
   isDocumentLocked,
   overallDocumentStatus,
@@ -49,6 +50,23 @@ describe("overall document status", () => {
     expect(overallDocumentStatus(["REUPLOAD_REQUIRED", "REQUESTED"])).toBe(
       "DOCUMENT_CORRECTION_REQUIRED",
     );
+  });
+});
+
+describe("document lead-status synchronization", () => {
+  it("reconciles application review directly to the calculated document stage", () => {
+    expect(
+      canApplyDocumentRollup("APPLICATION_UNDER_REVIEW", "DOCUMENTS_APPROVED"),
+    ).toBe(true);
+  });
+
+  it("does not bypass application review or later franchise gates", () => {
+    expect(
+      canApplyDocumentRollup("APPLICATION_SUBMITTED", "DOCUMENTS_APPROVED"),
+    ).toBe(false);
+    expect(
+      canApplyDocumentRollup("FRANCHISE_APPROVED", "DOCUMENTS_PENDING"),
+    ).toBe(false);
   });
 });
 

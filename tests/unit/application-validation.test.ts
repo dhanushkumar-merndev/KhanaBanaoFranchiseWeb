@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { applicationSchema } from "@/lib/validation/application";
+import {
+  applicationEditSchema,
+  applicationSchema,
+} from "@/lib/validation/application";
 
 const valid = {
   fullName: "Ramesh Iyer",
@@ -122,5 +125,22 @@ describe("public application form", () => {
         field,
       ).toBe(false);
     }
+  });
+});
+
+describe("admin application corrections", () => {
+  const editable: Partial<typeof valid> = { ...valid };
+  delete editable.informationTrue;
+  delete editable.consentToVerification;
+  delete editable.termsAccepted;
+
+  it("validates editable fields without asking staff to accept the declaration", () => {
+    expect(applicationEditSchema.safeParse(editable).success).toBe(true);
+  });
+
+  it("uses the same contact validation as the original application", () => {
+    expect(
+      applicationEditSchema.safeParse({ ...editable, mobile: "123" }).success,
+    ).toBe(false);
   });
 });

@@ -100,6 +100,18 @@ export const applicationSchema = z.object({
 
 export type ApplicationInput = z.input<typeof applicationSchema>;
 
+/**
+ * Staff may correct submitted answers, but they cannot rewrite the applicant's
+ * declaration or its original acceptance timestamp.
+ */
+export const applicationEditSchema = applicationSchema.omit({
+  informationTrue: true,
+  consentToVerification: true,
+  termsAccepted: true,
+});
+
+export type ApplicationEditInput = z.input<typeof applicationEditSchema>;
+
 /** JSONB column shapes, so the reader and the writer agree. */
 export type PersonalDetails = {
   full_name: string;

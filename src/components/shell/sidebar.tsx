@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -111,11 +110,13 @@ export function Sidebar({ role }: { role: Role }) {
       {/* Desktop rail */}
       <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-line bg-surface lg:flex">
         <Link href="/" className="flex h-16 items-center border-b border-line px-4">
-          <Image
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src={images.logo}
             alt={site.name}
             width={images.logoWidth}
             height={images.logoHeight}
+            decoding="async"
             className="h-8 w-auto"
           />
         </Link>
@@ -133,11 +134,13 @@ export function Sidebar({ role }: { role: Role }) {
           />
           <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-surface shadow-2xl">
             <div className="flex h-16 items-center justify-between border-b border-line px-4">
-              <Image
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src={images.logo}
                 alt={site.name}
                 width={images.logoWidth}
                 height={images.logoHeight}
+                decoding="async"
                 className="h-8 w-auto"
               />
               <button

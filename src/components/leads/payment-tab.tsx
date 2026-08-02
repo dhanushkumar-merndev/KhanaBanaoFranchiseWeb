@@ -43,6 +43,10 @@ import {
   type LeadStatus,
 } from "@/lib/domain/enums";
 import { PAYMENT_STATUS_LABELS, paymentStatusTone } from "@/lib/domain/status";
+import {
+  MAX_DOCUMENT_UPLOAD_BYTES,
+  MAX_DOCUMENT_UPLOAD_MB,
+} from "@/lib/upload-limits";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { franchiseFee } from "@/lib/site";
 import { formatCurrency } from "@/lib/utils";
@@ -323,6 +327,12 @@ function RecordDialog({
       formData.delete("proof");
 
       if (proof instanceof File && proof.size > 0) {
+        if (proof.size > MAX_DOCUMENT_UPLOAD_BYTES) {
+          const message = `The payment proof must be ${MAX_DOCUMENT_UPLOAD_MB} MB or smaller.`;
+          setErrors({ proof: message });
+          toast.error(message);
+          return;
+        }
         const prepared = await preparePaymentProofUpload(leadId, {
           fileName: proof.name,
           fileSize: proof.size,
@@ -436,7 +446,7 @@ function RecordDialog({
               label="Payment proof"
               htmlFor="pay-proof"
               error={errors.proof}
-              hint="PDF, JPG, PNG or WebP up to 10 MB. Without it the payment stays pending."
+              hint={`PDF, JPG, PNG or WebP up to ${MAX_DOCUMENT_UPLOAD_MB} MB. Without it the payment stays pending.`}
             >
               <Input
                 id="pay-proof"

@@ -75,13 +75,14 @@ export async function checkApprovalReadiness(
   const readiness = {
     applicationSubmitted: Boolean(
       application &&
-        ["SUBMITTED", "UNDER_REVIEW", "APPROVED"].includes(application.status),
+      ["SUBMITTED", "UNDER_REVIEW", "APPROVED"].includes(application.status),
     ),
     businessDiscussionRecorded: (discussions ?? 0) > 0,
     // No requested documents means nothing has been verified, so this gate
     // stays shut rather than vacuously passing.
     allDocumentsApproved:
-      statuses.length > 0 && overallDocumentStatus(statuses) === "DOCUMENTS_APPROVED",
+      statuses.length > 0 &&
+      overallDocumentStatus(statuses) === "DOCUMENTS_APPROVED",
   };
 
   return { ...readiness, ready: canApproveFranchise(readiness) };
@@ -111,7 +112,11 @@ export async function approveFranchise(
   }
 
   if (Object.keys(fieldErrors).length > 0) {
-    return { ok: false, message: "Please check the highlighted fields.", fieldErrors };
+    return {
+      ok: false,
+      message: "Please check the highlighted fields.",
+      fieldErrors,
+    };
   }
 
   const readiness = await checkApprovalReadiness(leadId);
@@ -130,8 +135,35 @@ export async function approveFranchise(
     .maybeSingle();
 
   if (!lead) return { ok: false, message: "That lead no longer exists." };
-  if (!canTransition(lead.current_status, "FRANCHISE_APPROVED")) {
-    return { ok: false, message: "This lead cannot be approved from its current stage." };
+
+  // Older/out-of-order document reviews can leave the aggregate requests
+  // approved while the lead itself is still at application review. Reconcile
+  // that stale display stage before applying the guarded approval transition.
+  let approvalFrom = lead.current_status as LeadStatus;
+  if (
+    approvalFrom === "APPLICATION_UNDER_REVIEW" &&
+    readiness.allDocumentsApproved
+  ) {
+    await supabase
+      .from("leads")
+      .update({ current_status: "DOCUMENTS_APPROVED" })
+      .eq("id", leadId);
+    await supabase.from("lead_activities").insert({
+      lead_id: leadId,
+      member_id: profile.id,
+      activity_type: "STATUS_CHANGE",
+      previous_status: approvalFrom,
+      new_status: "DOCUMENTS_APPROVED",
+      notes: "Document status reconciled from approved request records.",
+    });
+    approvalFrom = "DOCUMENTS_APPROVED";
+  }
+
+  if (!canTransition(approvalFrom, "FRANCHISE_APPROVED")) {
+    return {
+      ok: false,
+      message: "This lead cannot be approved from its current stage.",
+    };
   }
 
   const { data: application } = await supabase
@@ -140,7 +172,8 @@ export async function approveFranchise(
     .eq("lead_id", leadId)
     .maybeSingle();
 
-  if (!application) return { ok: false, message: "There is no application to approve." };
+  if (!application)
+    return { ok: false, message: "There is no application to approve." };
 
   let letterPath: string | null = null;
   if (letter instanceof File && letter.size > 0) {
@@ -149,7 +182,11 @@ export async function approveFranchise(
       allowed: ALLOWED_AGREEMENT_TYPES,
     });
     if (!check.ok) {
-      return { ok: false, message: check.message, fieldErrors: { letter: check.message } };
+      return {
+        ok: false,
+        message: check.message,
+        fieldErrors: { letter: check.message },
+      };
     }
     letterPath = approvalLetterPath(application.id, letter.name);
     const uploaded = await uploadFile(
@@ -176,14 +213,17 @@ export async function approveFranchise(
 
   await supabase
     .from("leads")
-    .update({ current_status: "FRANCHISE_APPROVED", preferred_territory: territory })
+    .update({
+      current_status: "FRANCHISE_APPROVED",
+      preferred_territory: territory,
+    })
     .eq("id", leadId);
 
   await supabase.from("lead_activities").insert({
     lead_id: leadId,
     member_id: profile.id,
     activity_type: "STATUS_CHANGE",
-    previous_status: lead.current_status,
+    previous_status: approvalFrom,
     new_status: "FRANCHISE_APPROVED",
     notes: `Approved for ${territory} (${model}).`,
     territory_discussed: territory,
@@ -378,7 +418,11 @@ export async function activateFranchise(
     fieldErrors.activationDate = "Pick the activation date";
   }
   if (Object.keys(fieldErrors).length > 0) {
-    return { ok: false, message: "Please check the highlighted fields.", fieldErrors };
+    return {
+      ok: false,
+      message: "Please check the highlighted fields.",
+      fieldErrors,
+    };
   }
 
   const readiness = await checkActivationReadiness(leadId);
@@ -433,7 +477,10 @@ export async function activateFranchise(
     .single();
 
   if (error || !franchise) {
-    return { ok: false, message: error?.message ?? "Could not activate the franchise." };
+    return {
+      ok: false,
+      message: error?.message ?? "Could not activate the franchise.",
+    };
   }
 
   // Seed the setup checklist so the new franchise has real work to tick off.
@@ -446,7 +493,10 @@ export async function activateFranchise(
   );
 
   if (canTransition(lead.current_status, "ACTIVE")) {
-    await supabase.from("leads").update({ current_status: "ACTIVE" }).eq("id", leadId);
+    await supabase
+      .from("leads")
+      .update({ current_status: "ACTIVE" })
+      .eq("id", leadId);
     await supabase.from("lead_activities").insert({
       lead_id: leadId,
       member_id: profile.id,
@@ -511,7 +561,11 @@ export async function scheduleTraining(
     fieldErrors.scheduledAt = "Pick the date and time";
   }
   if (Object.keys(fieldErrors).length > 0) {
-    return { ok: false, message: "Please check the highlighted fields.", fieldErrors };
+    return {
+      ok: false,
+      message: "Please check the highlighted fields.",
+      fieldErrors,
+    };
   }
 
   const { data: franchise } = await supabase
@@ -520,7 +574,8 @@ export async function scheduleTraining(
     .eq("id", franchiseId)
     .maybeSingle();
 
-  if (!franchise) return { ok: false, message: "That franchise no longer exists." };
+  if (!franchise)
+    return { ok: false, message: "That franchise no longer exists." };
 
   const { error } = await supabase.from("training_records").insert({
     franchise_id: franchiseId,
@@ -535,7 +590,11 @@ export async function scheduleTraining(
 
   if (error) return { ok: false, message: error.message };
 
-  await moveLeadForTraining(franchise.lead_id, "TRAINING_SCHEDULED", profile.id);
+  await moveLeadForTraining(
+    franchise.lead_id,
+    "TRAINING_SCHEDULED",
+    profile.id,
+  );
 
   if (sendEmail && franchise.email) {
     await sendTemplateEmail({
@@ -577,14 +636,16 @@ export async function setTrainingStatus(
     .eq("id", recordId)
     .maybeSingle();
 
-  if (!record) return { ok: false, message: "That training record no longer exists." };
+  if (!record)
+    return { ok: false, message: "That training record no longer exists." };
 
   await supabase
     .from("training_records")
     .update({
       status: target,
       attendance: attendance?.trim() || null,
-      completed_at: target === "TRAINING_COMPLETED" ? new Date().toISOString() : null,
+      completed_at:
+        target === "TRAINING_COMPLETED" ? new Date().toISOString() : null,
     })
     .eq("id", recordId);
 
@@ -672,7 +733,8 @@ export async function toggleSetupItem(
     .eq("id", itemId)
     .maybeSingle();
 
-  if (!item) return { ok: false, message: "That checklist item no longer exists." };
+  if (!item)
+    return { ok: false, message: "That checklist item no longer exists." };
 
   await supabase
     .from("setup_items")
@@ -760,7 +822,8 @@ export async function goLive(
     .eq("id", franchiseId)
     .maybeSingle();
 
-  if (!franchise) return { ok: false, message: "That franchise no longer exists." };
+  if (!franchise)
+    return { ok: false, message: "That franchise no longer exists." };
   if (franchise.status === "LIVE" || franchise.status === "ONGOING_SUPPORT") {
     return { ok: false, message: "That franchise is already live." };
   }
@@ -833,9 +896,13 @@ export async function moveToOngoingSupport(
     .eq("id", franchiseId)
     .maybeSingle();
 
-  if (!franchise) return { ok: false, message: "That franchise no longer exists." };
+  if (!franchise)
+    return { ok: false, message: "That franchise no longer exists." };
   if (franchise.status !== "LIVE") {
-    return { ok: false, message: "Only a live franchise moves to ongoing support." };
+    return {
+      ok: false,
+      message: "Only a live franchise moves to ongoing support.",
+    };
   }
 
   await supabase

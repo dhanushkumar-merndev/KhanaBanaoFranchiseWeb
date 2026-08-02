@@ -450,6 +450,10 @@ export type Database = {
       current_profile_id: { Args: Record<never, never>; Returns: string | null };
       is_admin: { Args: Record<never, never>; Returns: boolean };
       admin_dashboard_stats: { Args: Record<never, never>; Returns: Json };
+      admin_delete_lead_cascade: {
+        Args: { target_lead: string };
+        Returns: Json;
+      };
     };
     Enums: Record<never, never>;
     CompositeTypes: Record<never, never>;

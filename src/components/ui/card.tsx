@@ -30,27 +30,6 @@ export function CardTitle({ className, ...props }: React.ComponentProps<"h3">) {
   );
 }
 
-export function CardDescription({
-  className,
-  ...props
-}: React.ComponentProps<"p">) {
-  return (
-    <p className={cn("text-[0.78rem] text-ink-soft", className)} {...props} />
-  );
-}
-
 export function CardContent({ className, ...props }: React.ComponentProps<"div">) {
   return <div className={cn("px-5 py-4", className)} {...props} />;
-}
-
-export function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      className={cn(
-        "flex items-center gap-2 border-t border-line px-5 py-3.5",
-        className,
-      )}
-      {...props}
-    />
-  );
 }

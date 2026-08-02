@@ -174,7 +174,11 @@ export async function getLeadPipeline(leadId: string): Promise<LeadPipeline> {
     { data: franchise },
     { data: emails },
   ] = await Promise.all([
-    supabase.from("applications").select("*").eq("lead_id", leadId).maybeSingle(),
+    supabase
+      .from("applications")
+      .select("*")
+      .eq("lead_id", leadId)
+      .maybeSingle(),
     supabase
       .from("agreements")
       .select("*")
@@ -194,13 +198,12 @@ export async function getLeadPipeline(leadId: string): Promise<LeadPipeline> {
         "id, template_key, to_email, subject, body_preview, status, error_message, created_at, triggered_by",
       )
       .eq("lead_id", leadId)
+      .or("template_key.is.null,template_key.neq.DOCUMENT_ACCESS_OTP")
       .order("created_at", { ascending: false })
       .limit(50),
   ]);
 
-  const documents = application
-    ? await loadDocuments(application.id)
-    : [];
+  const documents = application ? await loadDocuments(application.id) : [];
 
   const training = franchise
     ? ((

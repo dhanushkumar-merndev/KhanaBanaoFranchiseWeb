@@ -45,7 +45,8 @@ export default async function EmailLogsPage({
     .select(
       "id, template_key, to_email, subject, body_preview, status, error_message, created_at, triggered_by",
       { count: "exact" },
-    );
+    )
+    .or("template_key.is.null,template_key.neq.DOCUMENT_ACCESS_OTP");
 
   if (status) query = query.eq("status", status);
   if (params.q) {
@@ -76,7 +77,8 @@ export default async function EmailLogsPage({
   }));
 
   const tabs = VIEWS.map((view) => ({
-    href: view === "all" ? "/admin/email-logs" : `/admin/email-logs?status=${view}`,
+    href:
+      view === "all" ? "/admin/email-logs" : `/admin/email-logs?status=${view}`,
     label: VIEW_LABELS[view],
   }));
 
@@ -95,7 +97,12 @@ export default async function EmailLogsPage({
           description="Every send attempt this system has made, successful or not. A failed email never rolls back the action that triggered it."
         />
 
-        <TabNav items={tabs} active={activeHref} label="Log views" className="mb-5" />
+        <TabNav
+          items={tabs}
+          active={activeHref}
+          label="Log views"
+          className="mb-5"
+        />
 
         <EmailsTab emails={emails} />
 

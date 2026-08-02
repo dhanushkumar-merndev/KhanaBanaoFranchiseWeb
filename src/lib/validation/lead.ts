@@ -114,13 +114,6 @@ export const followupSchema = z.object({
 
 export type FollowupInput = z.input<typeof followupSchema>;
 
-export const completeFollowupSchema = z.object({
-  followupId: z.string().uuid(),
-  completedNote: optionalText(1000),
-});
-
-export type CompleteFollowupInput = z.input<typeof completeFollowupSchema>;
-
 export const rescheduleFollowupSchema = z.object({
   followupId: z.string().uuid(),
   dueAt: dateTimeString,

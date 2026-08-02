@@ -38,6 +38,7 @@ const TYPE_LABEL: Record<string, string> = {
   CONTACT: "Contact logged",
   BUSINESS_DISCUSSION: "Business discussion",
   STATUS_CHANGE: "Status changed",
+  APPLICATION_EDITED: "Application corrected",
 };
 
 const OUTCOME_LABEL: Record<string, string> = {

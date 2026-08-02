@@ -18,6 +18,7 @@ import {
   addDocumentReviewNote,
   approveDocument,
   cancelDocumentRequest,
+  deleteDocument,
   getDocumentUrl,
   requestDocuments,
   requestDocumentReupload,
@@ -43,7 +44,10 @@ import {
   DOCUMENT_TYPE_LABELS,
   type DocumentType,
 } from "@/lib/domain/enums";
-import { DOCUMENT_STATUS_LABELS, documentStatusTone } from "@/lib/domain/status";
+import {
+  DOCUMENT_STATUS_LABELS,
+  documentStatusTone,
+} from "@/lib/domain/status";
 import { formatBytes, formatDateTime } from "@/lib/format";
 import type { DocumentRow } from "@/lib/data/pipeline";
 import type { ApprovalReadiness } from "@/app/actions/franchises";
@@ -82,8 +86,8 @@ export function DocumentsTab({
       {documents.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-[0.82rem] text-ink-soft">
-            {documents.filter((row) => row.requestStatus === "APPROVED").length} of{" "}
-            {documents.length} approved
+            {documents.filter((row) => row.requestStatus === "APPROVED").length}{" "}
+            of {documents.length} approved
           </p>
           {requestButton}
         </div>
@@ -113,6 +117,7 @@ export function DocumentsTab({
               key={row.requestId}
               row={row}
               isAdmin={isAdmin}
+              canDelete={!franchiseApproved}
               onLinkIssued={setIssuedUrl}
             />
           ))}
@@ -169,16 +174,20 @@ function LinkBanner({ url }: { url: string }) {
 function DocumentCard({
   row,
   isAdmin,
+  canDelete,
   onLinkIssued,
 }: {
   row: DocumentRow;
   isAdmin: boolean;
+  canDelete: boolean;
   onLinkIssued: (url: string) => void;
 }) {
+  const router = useRouter();
   const [approveOpen, setApproveOpen] = useState(false);
   const [reuploadOpen, setReuploadOpen] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [opening, setOpening] = useState<"view" | "download" | null>(null);
 
@@ -218,7 +227,9 @@ function DocumentCard({
           </div>
 
           {row.requestNote && (
-            <p className="mt-1 text-[0.78rem] text-ink-soft">{row.requestNote}</p>
+            <p className="mt-1 text-[0.78rem] text-ink-soft">
+              {row.requestNote}
+            </p>
           )}
 
           {document ? (
@@ -230,7 +241,8 @@ function DocumentCard({
             </p>
           ) : (
             <p className="mt-1.5 text-[0.72rem] text-ink-soft">
-              Requested {formatDateTime(row.requestedAt)} — nothing uploaded yet.
+              Requested {formatDateTime(row.requestedAt)} — nothing uploaded
+              yet.
             </p>
           )}
 
@@ -290,11 +302,19 @@ function DocumentCard({
 
           {isAdmin && document && !approved && (
             <>
-              <Button size="sm" variant="success" onClick={() => setApproveOpen(true)}>
+              <Button
+                size="sm"
+                variant="success"
+                onClick={() => setApproveOpen(true)}
+              >
                 <Check />
                 Approve
               </Button>
-              <Button size="sm" variant="outline" onClick={() => setReuploadOpen(true)}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setReuploadOpen(true)}
+              >
                 <RotateCw />
                 Re-upload
               </Button>
@@ -312,7 +332,18 @@ function DocumentCard({
             </Button>
           )}
 
-          {isAdmin && !approved && (
+          {isAdmin && document && canDelete && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setDeleteOpen(true)}
+              aria-label={`Delete ${DOCUMENT_TYPE_LABELS[row.documentType]}`}
+            >
+              <Trash2 />
+            </Button>
+          )}
+
+          {isAdmin && !document && (
             <Button
               size="sm"
               variant="ghost"
@@ -382,6 +413,30 @@ function DocumentCard({
             onOpenChange={setNoteOpen}
             documentId={document.id}
           />
+
+          <ConfirmDialog
+            open={deleteOpen}
+            onOpenChange={setDeleteOpen}
+            variant="danger"
+            title={`Delete ${DOCUMENT_TYPE_LABELS[row.documentType]}?`}
+            description="This permanently removes every uploaded version and its review history."
+            confirmLabel="Delete document"
+            successMessage="Document deleted. A fresh upload link is ready."
+            onConfirm={async () => {
+              const result = await deleteDocument(document.id);
+              if (result.ok) {
+                onLinkIssued(result.data.url);
+                router.refresh();
+              }
+              return result;
+            }}
+          >
+            <p className="text-[0.82rem] leading-relaxed text-ink-soft">
+              The request stays open and moves back to pending. Copy the fresh
+              secure link shown above and send it to the applicant for a new
+              upload.
+            </p>
+          </ConfirmDialog>
         </>
       )}
 
@@ -556,7 +611,12 @@ function RequestDialog({
         </DialogBody>
 
         <DialogFooter className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <Button type="button" variant="outline" onClick={onClose} disabled={busy}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={busy}
+          >
             Cancel
           </Button>
           <Button

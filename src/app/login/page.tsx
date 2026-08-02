@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { GoogleButton } from "@/components/auth/google-button";
@@ -28,12 +27,15 @@ export default async function LoginPage({
     <main className="flex flex-1 items-center justify-center bg-canvas px-5 py-16">
       <div className="w-full max-w-md">
         <div className="rounded-2xl border border-line bg-surface p-8 shadow-[0_24px_60px_-40px_rgba(110,40,20,0.5)]">
-          <Image
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src={images.logo}
             alt={site.name}
             width={images.logoWidth}
             height={images.logoHeight}
-            priority
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
             className="h-11 w-auto"
           />
 

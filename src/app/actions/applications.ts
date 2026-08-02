@@ -11,7 +11,9 @@ import { resolveToken } from "@/lib/data/tokens";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { applicationUrl, createToken, hashToken } from "@/lib/tokens";
 import {
+  applicationEditSchema,
   applicationSchema,
+  type ApplicationEditInput,
   type ApplicationInput,
 } from "@/lib/validation/application";
 import { invalid, type ActionResult } from "@/lib/validation/result";
@@ -30,6 +32,46 @@ function refresh(leadId: string) {
 }
 
 const LINK_TTL_DAYS = 30;
+
+function applicationDetails(values: ApplicationEditInput) {
+  return {
+    personal_details: {
+      full_name: normalizeText(values.fullName),
+      mobile: normalizePhone(values.mobile),
+      whatsapp: values.whatsapp ? normalizePhone(values.whatsapp) : null,
+      email: normalizeEmail(values.email),
+      date_of_birth: values.dateOfBirth,
+    },
+    address_details: {
+      current_address: normalizeText(values.currentAddress),
+      city: normalizeText(values.city),
+      state: normalizeText(values.state),
+      pin_code: values.pinCode.trim(),
+    },
+    business_details: {
+      current_occupation: normalizeText(values.currentOccupation),
+      business_experience: blank(values.businessExperience),
+      company_name: blank(values.companyName),
+      gst_number: values.gstNumber
+        ? values.gstNumber.trim().toUpperCase()
+        : null,
+    },
+    franchise_details: {
+      preferred_city: normalizeText(values.preferredCity),
+      preferred_territory: blank(values.preferredTerritory),
+      investment_budget: normalizeText(values.investmentBudget),
+      franchise_model: blank(values.franchiseModel),
+      expected_start_date: blank(values.expectedStartDate),
+    },
+    financial_details: {
+      source_of_investment: normalizeText(values.sourceOfInvestment),
+      available_investment_amount: normalizeText(
+        values.availableInvestmentAmount,
+      ),
+      bank_name: blank(values.bankName),
+    },
+  };
+}
 
 /**
  * Issue (or reissue) the applicant's secure application link (spec §13).
@@ -202,37 +244,7 @@ export async function submitApplication(
   const now = new Date().toISOString();
 
   const payload = {
-    personal_details: {
-      full_name: normalizeText(values.fullName),
-      mobile: normalizePhone(values.mobile),
-      whatsapp: values.whatsapp ? normalizePhone(values.whatsapp) : null,
-      email: normalizeEmail(values.email),
-      date_of_birth: values.dateOfBirth,
-    },
-    address_details: {
-      current_address: normalizeText(values.currentAddress),
-      city: normalizeText(values.city),
-      state: normalizeText(values.state),
-      pin_code: values.pinCode.trim(),
-    },
-    business_details: {
-      current_occupation: normalizeText(values.currentOccupation),
-      business_experience: blank(values.businessExperience),
-      company_name: blank(values.companyName),
-      gst_number: values.gstNumber ? values.gstNumber.trim().toUpperCase() : null,
-    },
-    franchise_details: {
-      preferred_city: normalizeText(values.preferredCity),
-      preferred_territory: blank(values.preferredTerritory),
-      investment_budget: normalizeText(values.investmentBudget),
-      franchise_model: blank(values.franchiseModel),
-      expected_start_date: blank(values.expectedStartDate),
-    },
-    financial_details: {
-      source_of_investment: normalizeText(values.sourceOfInvestment),
-      available_investment_amount: normalizeText(values.availableInvestmentAmount),
-      bank_name: blank(values.bankName),
-    },
+    ...applicationDetails(values),
     declaration: {
       information_true: true,
       consent_to_verification: true,
@@ -296,6 +308,65 @@ export async function submitApplication(
       submittedAt: updated.submitted_at ?? now,
     },
   };
+}
+
+/** Corrects a submitted application without changing its workflow status. */
+export async function updateApplicationDetails(
+  applicationId: string,
+  input: ApplicationEditInput,
+): Promise<ActionResult> {
+  const profile = await requireAdmin();
+  const parsed = applicationEditSchema.safeParse(input);
+  if (!parsed.success) return invalid(parsed.error.issues);
+
+  const supabase = createAdminClient();
+  const { data: application } = await supabase
+    .from("applications")
+    .select("id, lead_id, application_number, status")
+    .eq("id", applicationId)
+    .maybeSingle();
+
+  if (!application) {
+    return { ok: false, message: "That application no longer exists." };
+  }
+  if (application.status === "IN_PROGRESS") {
+    return {
+      ok: false,
+      message: "Wait for the applicant to submit before correcting their answers.",
+    };
+  }
+  if (application.status === "REJECTED") {
+    return {
+      ok: false,
+      message: "A rejected application cannot be edited.",
+    };
+  }
+
+  const { error } = await supabase
+    .from("applications")
+    .update(applicationDetails(parsed.data))
+    .eq("id", application.id);
+
+  if (error) return { ok: false, message: error.message };
+
+  await Promise.all([
+    supabase.from("lead_activities").insert({
+      lead_id: application.lead_id,
+      member_id: profile.id,
+      activity_type: "APPLICATION_EDITED",
+      notes: `Application ${application.application_number} details corrected by ${profile.full_name}.`,
+    }),
+    supabase.from("activity_logs").insert({
+      actor_id: profile.id,
+      entity_type: "application",
+      entity_id: application.id,
+      action: "APPLICATION_UPDATED",
+      summary: `Application ${application.application_number} details corrected.`,
+    }),
+  ]);
+
+  refresh(application.lead_id);
+  return { ok: true };
 }
 
 /** Moves a submitted application into review so the queue reflects reality. */

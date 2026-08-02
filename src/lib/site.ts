@@ -30,23 +30,36 @@ export const nav = [
   { label: "FAQ", href: "#faq" },
   { label: "Contact", href: "#contact" },
 ] as const;
-
 export const images = {
   /**
    * `logo-mark.png` is `logo.png` with its transparent padding trimmed
    * (2600x2000 -> 2520x854). The original is untouched at /logo.png.
-   * Regenerate with: node scripts/trim-logo.mjs
    */
   logo: "/logo-mark.png",
   logoWidth: 2520,
   logoHeight: 854,
   heroFeast: "/images/hero-feast.webp",
   flavours: [
-    { src: "/images/flavour-1.webp", alt: "Chef serving guests at a live Indian catering counter" },
-    { src: "/images/flavour-2.webp", alt: "Copper handis filled with an Indian buffet spread" },
-    { src: "/images/flavour-3.webp", alt: "Elegant wedding table with gold place settings and crimson flowers" },
-    { src: "/images/flavour-4.webp", alt: "Signature Indian curry served steaming in a copper handi" },
-    { src: "/images/flavour-5.webp", alt: "Traditional Indian sweets arranged on a brass celebration platter" },
+    {
+      src: "/images/flavour-1.webp",
+      alt: "Chef serving guests at a live Indian catering counter",
+    },
+    {
+      src: "/images/flavour-2.webp",
+      alt: "Copper handis filled with an Indian buffet spread",
+    },
+    {
+      src: "/images/flavour-3.webp",
+      alt: "Elegant wedding table with gold place settings and crimson flowers",
+    },
+    {
+      src: "/images/flavour-4.webp",
+      alt: "Signature Indian curry served steaming in a copper handi",
+    },
+    {
+      src: "/images/flavour-5.webp",
+      alt: "Traditional Indian sweets arranged on a brass celebration platter",
+    },
   ],
 } as const;
 
@@ -274,18 +287,4 @@ export const faqs = [
     q: "What ongoing support do I get?",
     a: "A dedicated support owner, ongoing chef and operations guidance, refreshed marketing creatives, updated rate cards and vendor introductions — for as long as your franchise is active.",
   },
-] as const;
-
-export const processTimeline = [
-  "Franchise Enquiry",
-  "Business Discussion",
-  "Application Review",
-  "Franchise Approval",
-  "Franchise Agreement",
-  "Payment",
-  "Franchise Activation",
-  "Training",
-  "Business Setup",
-  "Go Live",
-  "Ongoing Support",
 ] as const;

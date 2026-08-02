@@ -96,7 +96,10 @@ export async function requestDocumentAccessOtp(
     .eq("id", resolved.data.tokenId);
 
   if (updateError) {
-    return { ok: false, message: "We could not create a code. Please try again." };
+    return {
+      ok: false,
+      message: "We could not create a code. Please try again.",
+    };
   }
 
   const delivery = await sendTemplateEmail({
@@ -111,10 +114,11 @@ export async function requestDocumentAccessOtp(
       verification_code: code,
     },
     leadId: resolved.data.leadId,
+    sensitive: true,
     override: {
       subject: "Your Khana Banao document verification code",
       bodyHtml:
-        "<p>Hi {{applicant_name}},</p><p>Your verification code for the secure document-upload page is:</p><p style=\"font-size:28px;font-weight:700;letter-spacing:6px\">{{verification_code}}</p><p>This code expires in 10 minutes. Do not share it with anyone.</p><p>Reference: {{lead_number}}</p>",
+        '<p>Hi {{applicant_name}},</p><p>Your verification code for the secure document-upload page is:</p><p style="font-size:28px;font-weight:700;letter-spacing:6px">{{verification_code}}</p><p>This code expires in 10 minutes. Do not share it with anyone.</p><p>Reference: {{lead_number}}</p>',
     },
   });
 
@@ -129,7 +133,8 @@ export async function requestDocumentAccessOtp(
       .eq("id", resolved.data.tokenId);
     return {
       ok: false,
-      message: "The verification email could not be sent. Please try again shortly.",
+      message:
+        "The verification email could not be sent. Please try again shortly.",
     };
   }
 
@@ -167,7 +172,10 @@ export async function verifyDocumentAccessOtp(
     return { ok: false, message: "Request a new verification code first." };
   }
   if (tokenRow.document_otp_attempts >= MAX_ATTEMPTS) {
-    return { ok: false, message: "Too many incorrect attempts. Request a new code." };
+    return {
+      ok: false,
+      message: "Too many incorrect attempts. Request a new code.",
+    };
   }
   if (new Date(tokenRow.document_otp_expires_at).getTime() < Date.now()) {
     return { ok: false, message: "That code has expired. Request a new one." };

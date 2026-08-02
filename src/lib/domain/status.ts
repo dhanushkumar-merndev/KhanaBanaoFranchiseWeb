@@ -6,6 +6,7 @@ import type {
   LeadStatus,
   PaymentStatus,
 } from "./enums";
+import { LEAD_STATUS_LABELS } from "./enums";
 
 /**
  * Badge tones. Colour is never the only signal — every badge also renders its
@@ -60,6 +61,67 @@ const LEAD_TONES: Partial<Record<LeadStatus, StatusTone>> = {
 
 export function leadStatusTone(status: LeadStatus): StatusTone {
   return LEAD_TONES[status] ?? "neutral";
+}
+
+/**
+ * The leads table is a pipeline overview, so completed milestones are grouped
+ * into the next action-oriented phase. Detail screens continue to show the
+ * exact underlying status for audit and workflow decisions.
+ */
+export function leadPipelineLabel(status: LeadStatus): string {
+  switch (status) {
+    case "DOCUMENTS_APPROVED":
+    case "FRANCHISE_APPROVED":
+    case "AGREEMENT_PENDING":
+    case "AGREEMENT_SENT":
+      return "Agreement in process";
+
+    case "AGREEMENT_COMPLETED":
+    case "PAYMENT_PENDING":
+    case "PAYMENT_PROOF_SUBMITTED":
+      return "Training pending";
+
+    case "PAYMENT_REJECTED":
+      return "Payment action needed";
+
+    case "PAYMENT_APPROVED":
+    case "READY_FOR_ACTIVATION":
+    case "ACTIVE":
+    case "TRAINING_PENDING":
+    case "TRAINING_SCHEDULED":
+    case "TRAINING_IN_PROGRESS":
+      return "Training in process";
+
+    case "TRAINING_COMPLETED":
+    case "SETUP_PENDING":
+    case "SETUP_IN_PROGRESS":
+    case "SETUP_COMPLETED":
+    case "READY_TO_GO_LIVE":
+      return "Franchise setup";
+
+    case "LIVE":
+    case "ONGOING_SUPPORT":
+      return "Franchise owner";
+
+    default:
+      return LEAD_STATUS_LABELS[status];
+  }
+}
+
+export function leadPipelineTone(status: LeadStatus): StatusTone {
+  if (status === "PAYMENT_REJECTED") return "danger";
+
+  switch (leadPipelineLabel(status)) {
+    case "Agreement in process":
+    case "Training pending":
+    case "Training in process":
+    case "Franchise setup":
+      return "progress";
+    case "Franchise owner":
+      return "success";
+    default:
+      return leadStatusTone(status);
+  }
 }
 
 export function documentStatusTone(status: DocumentStatus): StatusTone {

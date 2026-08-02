@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Reveal } from "@/components/motion/reveal";
 import { images } from "@/lib/site";
@@ -110,13 +109,13 @@ export function Flavours() {
                 className="w-[78%] shrink-0 snap-center sm:w-[46%] lg:w-[calc((100%-4rem)/5)]"
               >
                 <div className="group relative aspect-[4/3] overflow-hidden rounded-xl ring-1 ring-line shadow-[0_16px_36px_-26px_rgba(110,40,20,0.6)]">
-                  <Image
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
                     src={image.src}
                     alt={image.alt}
-                    fill
-                    sizes="(max-width: 640px) 78vw, (max-width: 1024px) 46vw, 20vw"
                     loading="lazy"
-                    className="object-cover transition duration-500 group-hover:scale-[1.06]"
+                    decoding="async"
+                    className="absolute inset-0 size-full object-cover transition duration-500 group-hover:scale-[1.06]"
                   />
                   <span
                     aria-hidden="true"

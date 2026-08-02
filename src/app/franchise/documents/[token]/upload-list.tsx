@@ -29,6 +29,10 @@ import { DOCUMENT_STATUS_LABELS } from "@/lib/domain/status";
 import { formatBytes, formatDateTime } from "@/lib/format";
 import type { DocumentStatus } from "@/lib/domain/enums";
 import { createClient } from "@/lib/supabase/client";
+import {
+  MAX_DOCUMENT_UPLOAD_BYTES,
+  MAX_DOCUMENT_UPLOAD_MB,
+} from "@/lib/upload-limits";
 
 export type UploadRow = {
   requestId: string;
@@ -45,7 +49,6 @@ export type UploadRow = {
 };
 
 const ACCEPT = ".pdf,.jpg,.jpeg,.png,.webp";
-const MAX_BYTES = 10 * 1024 * 1024;
 const ALLOWED_TYPES = new Set([
   "application/pdf",
   "image/jpeg",
@@ -55,8 +58,8 @@ const ALLOWED_TYPES = new Set([
 
 function validateFile(file: File) {
   if (file.size === 0) return "That file is empty.";
-  if (file.size > MAX_BYTES) {
-    return `That file is ${(file.size / 1024 / 1024).toFixed(1)} MB. The limit is 10 MB.`;
+  if (file.size > MAX_DOCUMENT_UPLOAD_BYTES) {
+    return `That file is ${(file.size / 1024 / 1024).toFixed(1)} MB. The limit is ${MAX_DOCUMENT_UPLOAD_MB} MB.`;
   }
   if (!ALLOWED_TYPES.has(file.type)) {
     return "Accepted formats are PDF, JPG, PNG and WebP.";
@@ -187,7 +190,7 @@ export function UploadList({
                 {readyCount} of {outstanding.length} document
                 {outstanding.length === 1 ? "" : "s"} ready
               </strong>
-              . PDF, JPG, PNG or WebP, up to 10&nbsp;MB each.
+              . PDF, JPG, PNG or WebP, up to {MAX_DOCUMENT_UPLOAD_MB}&nbsp;MB each.
             </p>
             <Badge tone={allReady ? "success" : "neutral"}>
               <FileCheck2 className="size-3" />

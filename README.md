@@ -1,36 +1,129 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# KHANA BANAO Franchise CRM
 
-## Getting Started
+Internal franchise lead-management application built with Next.js and Supabase.
+Access is invitation-only through Google. The primary administrator is:
 
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```text
+khanabanaofranchise@gmail.com
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Local setup
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Requirements: Node.js 20 or newer and pnpm.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+pnpm install
+```
 
-## Learn More
+Copy `.env.example` to `.env` and configure every value. In particular, use
+the URL and keys belonging to the same Supabase project that will receive the
+database migrations. Never expose or commit `SUPABASE_SERVICE_ROLE_KEY`.
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+pnpm dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The application will be available at <http://localhost:3000>.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Create or migrate the Supabase database
 
-## Deploy on Vercel
+The SQL migrations in `supabase/migrations` create the schema, row-level
+security policies, storage buckets, email templates, upload limits and primary
+administrator profile. Supabase records which migrations have already run, so
+later pushes apply only new migrations.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 1. Log in to the Supabase CLI
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The CLI does not need to be installed globally:
+
+```bash
+pnpm dlx supabase@latest login
+```
+
+### 2. Link the intended Supabase project
+
+Find the project reference in **Supabase Dashboard → Project Settings →
+General**, then run:
+
+```bash
+pnpm dlx supabase@latest link --project-ref YOUR_PROJECT_REF
+```
+
+Confirm the project name carefully before continuing. For an existing
+production database, take a backup before applying new migrations.
+
+### 3. Apply the migrations
+
+```bash
+pnpm dlx supabase@latest db push
+```
+
+On a new database this applies every migration in order. On an existing
+database it applies only migrations that are not yet recorded remotely.
+
+### 4. Verify the primary administrator
+
+Migration `0008_bootstrap_primary_admin.sql` guarantees that
+`khanabanaofranchise@gmail.com` has the `ADMIN` role and `ACTIVE` status. Verify
+it in **Supabase Dashboard → SQL Editor**:
+
+```sql
+select email, role, status, auth_user_id
+from public.profiles
+where lower(email) = 'khanabanaofranchise@gmail.com';
+```
+
+Before the first login, `auth_user_id` may be `null`; this is expected. The
+first successful Google login with that exact email securely links the
+Supabase Auth user to the existing administrator profile. A different Google
+account will not receive administrator access.
+
+If the migration has not been applied, the same admin can be created safely
+with:
+
+```bash
+node scripts/bootstrap-admin.mjs "khanabanaofranchise@gmail.com" "Khana Banao Admin"
+```
+
+The command is safe to repeat and does not change an existing profile.
+
+## Enable Google login
+
+1. Create Google OAuth credentials.
+2. In Google Cloud, add this authorized redirect URI:
+   `https://YOUR_PROJECT_REF.supabase.co/auth/v1/callback`.
+3. In **Supabase Dashboard → Authentication → Providers → Google**, enable
+   Google and enter the client ID and secret.
+4. In **Authentication → URL Configuration**, set the production site URL and
+   allow these redirect URLs:
+   `http://localhost:3000/auth/callback` and
+   `https://YOUR_DOMAIN/auth/callback`.
+5. Set `NEXT_PUBLIC_APP_URL` to the deployed application URL.
+6. Open `/login` and sign in as `khanabanaofranchise@gmail.com`.
+
+All other team members must be invited from **Admin → Members**. There is no
+public account registration.
+
+## Deploying later database changes
+
+After pulling a release containing new migration files:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm dlx supabase@latest db push
+pnpm check
+pnpm build
+```
+
+Apply database migrations before deploying application code that depends on
+them. Do not edit a migration that has already been applied; create the next
+numbered migration instead.
+
+## Validation
+
+```bash
+pnpm check
+pnpm build
+```
+
+`pnpm check` runs TypeScript, ESLint and the automated test suite.

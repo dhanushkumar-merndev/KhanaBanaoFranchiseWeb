@@ -1,12 +1,27 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import type { ColumnDef } from "@tanstack/react-table";
-import { AlertTriangle, CalendarClock } from "lucide-react";
+import {
+  AlertTriangle,
+  CalendarClock,
+  Download,
+  LoaderCircle,
+  MoreVertical,
+  Trash2,
+} from "lucide-react";
+import { toast } from "sonner";
+import {
+  deleteLeadPermanently,
+  prepareLeadExport,
+} from "@/app/actions/lead-admin";
 import { DataTable, type ColumnMetaConfig } from "@/components/data-table/data-table";
 import type { FilterConfig } from "@/components/data-table/toolbar";
 import { Badge, StatusBadge } from "@/components/ui/badge";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   LEAD_SOURCES,
   LEAD_SOURCE_LABELS,
@@ -15,7 +30,7 @@ import {
   type LeadSource,
   type LeadStatus,
 } from "@/lib/domain/enums";
-import { leadStatusTone } from "@/lib/domain/status";
+import { leadPipelineLabel, leadPipelineTone } from "@/lib/domain/status";
 import { formatDate, formatPhone, formatRelative } from "@/lib/format";
 
 export type LeadTableRow = {
@@ -42,6 +57,7 @@ export function LeadsTable({
   dir,
   basePath,
   memberOptions,
+  adminActions = false,
   toolbarActions,
   emptyAction,
 }: {
@@ -55,9 +71,50 @@ export function LeadsTable({
   basePath: string;
   /** Admin only; omit to hide the member filter. */
   memberOptions?: { value: string; label: string }[];
+  /** Adds permanent export/delete controls. Never enable on member pages. */
+  adminActions?: boolean;
   toolbarActions?: React.ReactNode;
   emptyAction?: React.ReactNode;
 }) {
+  const router = useRouter();
+  const [exportingId, setExportingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<LeadTableRow | null>(null);
+
+  const downloadLead = useCallback(async (lead: LeadTableRow) => {
+    setExportingId(lead.id);
+    const toastId = toast.loading(`Preparing ${lead.lead_number}…`);
+    try {
+      const prepared = await prepareLeadExport(lead.id);
+      if (!prepared.ok) {
+        toast.error(prepared.message, { id: toastId });
+        return;
+      }
+
+      toast.loading("Creating Excel workbook and ZIP in this browser…", {
+        id: toastId,
+      });
+      const { downloadLeadArchive } = await import(
+        "@/lib/client/lead-export-browser"
+      );
+      const result = await downloadLeadArchive(prepared.data);
+      toast.success(
+        result.missingFiles
+          ? `ZIP downloaded. ${result.missingFiles} file${result.missingFiles === 1 ? " was" : "s were"} unavailable; see README.txt inside.`
+          : "Complete lead ZIP downloaded.",
+        { id: toastId, duration: 6000 },
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "The lead export could not be created.",
+        { id: toastId },
+      );
+    } finally {
+      setExportingId(null);
+    }
+  }, []);
+
   const columns = useMemo<ColumnDef<LeadTableRow, unknown>[]>(
     () => [
       {
@@ -105,8 +162,8 @@ export function LeadsTable({
         meta: { sortKey: "current_status" } satisfies ColumnMetaConfig,
         cell: ({ row }) => (
           <StatusBadge
-            label={LEAD_STATUS_LABELS[row.original.current_status]}
-            tone={leadStatusTone(row.original.current_status)}
+            label={leadPipelineLabel(row.original.current_status)}
+            tone={leadPipelineTone(row.original.current_status)}
           />
         ),
       },
@@ -168,8 +225,66 @@ export function LeadsTable({
           </span>
         ),
       },
+      ...(adminActions
+        ? [
+            {
+              id: "actions",
+              header: "",
+              meta: {
+                align: "right",
+                locked: true,
+              } satisfies ColumnMetaConfig,
+              cell: ({ row }) => {
+                const lead = row.original;
+                const exporting = exportingId === lead.id;
+                return (
+                  <DropdownMenu.Root>
+                    <DropdownMenu.Trigger
+                      aria-label={`Actions for ${lead.full_name}`}
+                      className="grid size-8 place-items-center rounded-lg text-ink-soft transition hover:bg-surface-muted hover:text-ink"
+                    >
+                      {exporting ? (
+                        <LoaderCircle className="size-4 animate-spin" />
+                      ) : (
+                        <MoreVertical className="size-4" />
+                      )}
+                    </DropdownMenu.Trigger>
+                    <DropdownMenu.Portal>
+                      <DropdownMenu.Content
+                        align="end"
+                        sideOffset={4}
+                        className="z-50 min-w-[13rem] rounded-xl border border-line bg-surface p-1.5 shadow-xl"
+                      >
+                        <DropdownMenu.Item
+                          disabled={exporting}
+                          onSelect={() => void downloadLead(lead)}
+                          className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-[0.8rem] text-ink outline-none data-[disabled]:pointer-events-none data-[highlighted]:bg-surface-muted data-[disabled]:opacity-50"
+                        >
+                          {exporting ? (
+                            <LoaderCircle className="size-4 animate-spin" />
+                          ) : (
+                            <Download className="size-4" />
+                          )}
+                          Download complete record
+                        </DropdownMenu.Item>
+                        <DropdownMenu.Separator className="my-1 h-px bg-line" />
+                        <DropdownMenu.Item
+                          onSelect={() => setDeleteTarget(lead)}
+                          className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-[0.8rem] text-danger outline-none data-[highlighted]:bg-danger/5"
+                        >
+                          <Trash2 className="size-4" />
+                          Delete permanently
+                        </DropdownMenu.Item>
+                      </DropdownMenu.Content>
+                    </DropdownMenu.Portal>
+                  </DropdownMenu.Root>
+                );
+              },
+            } satisfies ColumnDef<LeadTableRow, unknown>,
+          ]
+        : []),
     ],
-    [basePath],
+    [adminActions, basePath, downloadLead, exportingId],
   );
 
   const filters: FilterConfig[] = [
@@ -204,21 +319,57 @@ export function LeadsTable({
   }
 
   return (
-    <DataTable
-      data={rows}
-      columns={columns}
-      total={total}
-      page={page}
-      pageSize={pageSize}
-      sort={sort}
-      dir={dir}
+    <>
+      <DataTable
+        data={rows}
+        columns={columns}
+        total={total}
+        page={page}
+        pageSize={pageSize}
+        sort={sort}
+        dir={dir}
       searchPlaceholder="Search name, phone, email or lead number…"
-      filters={filters}
-      toolbarActions={toolbarActions}
-      rowHref={(row) => `${basePath}/${row.id}`}
-      emptyTitle="No leads match this view"
-      emptyBody="Clear the filters, or add a lead that came in by phone or WhatsApp."
-      emptyAction={emptyAction}
-    />
+        filters={filters}
+        toolbarActions={toolbarActions}
+        rowHref={(row) => `${basePath}/${row.id}`}
+        emptyTitle="No leads match this view"
+        emptyBody="Clear the filters, or add a lead that came in by phone or WhatsApp."
+        emptyAction={emptyAction}
+      />
+
+      {deleteTarget && (
+        <ConfirmDialog
+          open
+          onOpenChange={(open) => !open && setDeleteTarget(null)}
+          variant="danger"
+          title={`Permanently delete ${deleteTarget.full_name}?`}
+          description={`${deleteTarget.lead_number} · ${deleteTarget.email}`}
+          confirmLabel="Delete everything"
+          onConfirm={async () => {
+            const result = await deleteLeadPermanently(deleteTarget.id);
+            if (result.ok) {
+              if (result.data.cleanupWarning) {
+                toast.warning(result.data.cleanupWarning, { duration: 7000 });
+              }
+              router.refresh();
+            }
+            return result;
+          }}
+          successMessage={`${deleteTarget.lead_number} and all related records were permanently deleted.`}
+        >
+          <div className="space-y-3 text-[0.82rem] leading-relaxed text-ink-soft">
+            <p>
+              This removes the lead, application, document history, uploaded
+              files, follow-ups, activities, agreements, payments, franchise,
+              training, setup and related email/audit records.
+            </p>
+            <p className="rounded-lg border border-danger/25 bg-danger/5 px-3 py-2 font-medium text-danger">
+              This cannot be undone. Download the complete record first if it
+              must be retained.
+            </p>
+          </div>
+        </ConfirmDialog>
+      )}
+    </>
   );
 }

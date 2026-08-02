@@ -28,7 +28,7 @@ type ContactActionProps = Omit<
   whatsapp?: string | null;
 };
 
-export function isMobileContactDevice() {
+function isMobileContactDevice() {
   if (typeof window === "undefined") return false;
 
   return (

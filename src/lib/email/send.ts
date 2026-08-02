@@ -22,6 +22,8 @@ type SendArgs = {
   triggeredBy?: string;
   /** Overrides the stored template — used by the "send test email" action. */
   override?: { subject: string; bodyHtml: string };
+  /** Sends normally, but never persists a readable body preview. */
+  sensitive?: boolean;
 };
 
 /**
@@ -45,10 +47,15 @@ export async function sendTemplateEmail(args: SendArgs): Promise<SendResult> {
       .maybeSingle();
 
     if (error || !template) {
-      return logAndReturn(args, {
-        status: "FAILED",
-        error: error?.message ?? `No template found for ${args.templateKey}`,
-      }, "", "");
+      return logAndReturn(
+        args,
+        {
+          status: "FAILED",
+          error: error?.message ?? `No template found for ${args.templateKey}`,
+        },
+        "",
+        "",
+      );
     }
 
     if (!template.is_active) {
@@ -123,7 +130,8 @@ export async function sendTemplateEmail(args: SendArgs): Promise<SendResult> {
       args,
       {
         status: "FAILED",
-        error: cause instanceof Error ? cause.message : "Unknown transport error",
+        error:
+          cause instanceof Error ? cause.message : "Unknown transport error",
       },
       renderedSubject,
       renderedBody,
@@ -145,7 +153,7 @@ async function logAndReturn(
         to_email: args.to.email,
         to_name: args.to.name ?? null,
         subject,
-        body_preview: htmlToText(body).slice(0, 500),
+        body_preview: args.sensitive ? null : htmlToText(body).slice(0, 500),
         status: result.status,
         provider_id: result.providerId ?? null,
         error_message: result.error ?? null,

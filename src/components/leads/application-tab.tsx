@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Copy, ExternalLink, FileText, Send, XCircle } from "lucide-react";
+import { Copy, ExternalLink, FileText, Pencil, Send, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
   rejectApplication,
@@ -17,6 +17,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmailConfirmDialog } from "@/components/ui/email-confirm-dialog";
 import { EmptyState } from "@/components/ui/feedback";
 import { Field, Textarea } from "@/components/ui/field";
+import { ApplicationEditDialog } from "@/components/leads/application-edit-dialog";
 import { formatDateTime } from "@/lib/format";
 import { formatCurrency } from "@/lib/utils";
 import type { ApplicationDetail } from "@/lib/data/pipeline";
@@ -122,6 +123,7 @@ export function ApplicationTab({
   const [reason, setReason] = useState("");
   const [issuedUrl, setIssuedUrl] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState(false);
+  const [editDialog, setEditDialog] = useState(false);
 
   const canSendLink =
     canManage &&
@@ -207,6 +209,16 @@ export function ApplicationTab({
           </div>
 
           <div className="flex flex-wrap gap-2">
+            {isAdmin && submitted && application.status !== "REJECTED" && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setEditDialog(true)}
+              >
+                <Pencil />
+                Edit application
+              </Button>
+            )}
             {canSendLink && (
               <Button size="sm" variant="outline" onClick={() => setLinkDialog(true)}>
                 <Send />
@@ -360,6 +372,13 @@ export function ApplicationTab({
           leadId={leadId}
           onClose={() => setLinkDialog(false)}
           onIssued={setIssuedUrl}
+        />
+      )}
+
+      {editDialog && (
+        <ApplicationEditDialog
+          application={application}
+          onClose={() => setEditDialog(false)}
         />
       )}
 

@@ -3,14 +3,15 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { STORAGE_BUCKETS } from "@/lib/domain/enums";
+import { MAX_DOCUMENT_UPLOAD_BYTES } from "@/lib/upload-limits";
 
 export type BucketName = (typeof STORAGE_BUCKETS)[keyof typeof STORAGE_BUCKETS];
 
 /** Signed URLs are short-lived: long enough to click, short enough to not leak. */
 const SIGNED_URL_TTL_SECONDS = 60 * 10;
 
-export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
-export const MAX_AGREEMENT_BYTES = 20 * 1024 * 1024;
+export const MAX_UPLOAD_BYTES = MAX_DOCUMENT_UPLOAD_BYTES;
+export const MAX_AGREEMENT_BYTES = MAX_DOCUMENT_UPLOAD_BYTES;
 
 export const ALLOWED_DOCUMENT_TYPES = [
   "application/pdf",
@@ -61,7 +62,7 @@ export async function removeFile(bucket: BucketName, path: string): Promise<void
  * Strips anything that could escape the intended folder or confuse a
  * Content-Disposition header, while keeping the name recognisable.
  */
-export function safeFileName(name: string): string {
+function safeFileName(name: string): string {
   const cleaned = name
     .normalize("NFKD")
     .replace(/[^\w.\- ]+/g, "")
@@ -98,13 +99,6 @@ export function approvalLetterPath(
   fileName: string,
 ): string {
   return `applications/${applicationId}/${Date.now()}-${safeFileName(fileName)}`;
-}
-
-export function trainingDocumentPath(
-  franchiseId: string,
-  fileName: string,
-): string {
-  return `franchises/${franchiseId}/${Date.now()}-${safeFileName(fileName)}`;
 }
 
 export type FileCheck = { ok: true } | { ok: false; message: string };
