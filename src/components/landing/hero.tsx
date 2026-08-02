@@ -97,12 +97,19 @@ export function Hero() {
         {/* ---------------- Image + seal ---------------- */}
         <Reveal variant="zoom" delay={120} className="relative">
           <div className="relative mx-auto aspect-[7/6] w-full max-w-[42rem]">
+            {/* Warm glow bleeding out from behind the arch */}
             <div
-              className="relative size-full overflow-hidden shadow-[0_40px_80px_-40px_rgba(110,40,20,0.55)] ring-1 ring-brand-gold/25"
-              style={{
-                borderRadius: "46% 22% 30% 52% / 52% 26% 38% 46%",
-              }}
-            >
+              aria-hidden="true"
+              className="hero-frame pointer-events-none absolute -inset-6 -z-10 bg-[radial-gradient(70%_70%_at_58%_45%,rgba(232,201,138,0.4),transparent_72%)]"
+            />
+
+            {/* Gold hairline tracing the frame a few pixels out */}
+            <div
+              aria-hidden="true"
+              className="hero-frame pointer-events-none absolute -inset-2.5 border border-brand-gold/45 sm:-inset-4"
+            />
+
+            <div className="hero-frame relative size-full overflow-hidden shadow-[0_40px_80px_-40px_rgba(110,40,20,0.55)] ring-1 ring-brand-gold/25">
               <Image
                 src={images.heroFeast}
                 alt="A Khana Banao catering spread — handis of biryani, curries and rice served at an event"
@@ -113,12 +120,28 @@ export function Hero() {
               />
               <div
                 aria-hidden="true"
-                className="absolute inset-0 bg-gradient-to-tr from-brand-maroon-dark/25 via-transparent to-transparent"
+                className="absolute inset-0 bg-gradient-to-tr from-brand-maroon-dark/30 via-transparent to-transparent"
+              />
+              {/* Dashed rule set in from the edge, like a mounted print */}
+              <div
+                aria-hidden="true"
+                className="hero-frame pointer-events-none absolute inset-3 border border-dashed border-white/30 sm:inset-5"
               />
             </div>
 
+            {/* Decor riding the frame. Sits above the photo but below the seal. */}
+            <div className="pointer-events-none absolute inset-0 z-10">
+              <Leaf src="/decor/floral-corner.svg" className="-right-5 -top-7 w-16 md:-right-8 md:-top-10 md:w-28" speed={-0.08} rotate={12} sway swayDelay={0.4} opacity={0.9} />
+              <Leaf src="/decor/leaf-sprig.svg" className="-bottom-7 left-1 w-14 md:-bottom-9 md:left-4 md:w-24" speed={0.12} rotate={-18} flip sway swayDelay={1} opacity={0.85} />
+              {/* Kept below 55% — higher up the arch it lands on the tail of
+                  the headline, which reaches this column at 1440px. */}
+              <Leaf src="/decor/cashews.svg" className="bottom-[22%] left-[-4%] w-10 md:w-16" speed={0.1} rotate={-10} sway swayDelay={0.7} opacity={0.9} desktopOnly />
+              <Leaf src="/decor/garlic.svg" className="bottom-[16%] right-[-4%] w-8 md:w-12" speed={-0.14} rotate={16} sway swayDelay={1.4} opacity={0.85} desktopOnly />
+            </div>
+
             {/* "Stronger Together" seal */}
-            <div className="absolute -bottom-4 right-2 sm:bottom-auto sm:right-0 sm:top-1/2 sm:-translate-y-1/2 lg:-right-2">
+            {/* z-20 keeps the seal above the decor layer, which is z-10. */}
+            <div className="absolute -bottom-4 right-2 z-20 sm:bottom-auto sm:right-0 sm:top-1/2 sm:-translate-y-1/2 lg:-right-2">
               <div className="grid size-[8.5rem] place-items-center rounded-full bg-gradient-to-br from-brand-maroon to-brand-maroon-dark p-1.5 text-center shadow-[0_22px_44px_-18px_rgba(109,13,18,0.9)] sm:size-[10.5rem]">
                 <div className="grid size-full place-items-center rounded-full border border-dashed border-brand-gold-light/60 px-3">
                   <div>

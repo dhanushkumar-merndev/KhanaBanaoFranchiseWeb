@@ -78,30 +78,40 @@ export function HeroHeading() {
   }, []);
 
   return (
-    <h1
-      ref={containerRef}
-      className="mt-4 font-display text-[2.6rem] leading-[1.06] font-bold tracking-tight text-ink sm:text-6xl lg:text-[4.15rem]"
-      style={{ perspective: "600px" }}
-    >
-      {lines.map((line, lineIdx) => (
-        <span
-          key={lineIdx}
-          className={`${lineIdx > 0 ? "mt-1 " : ""}block ${line.className ?? ""}`}
-        >
-          {line.text.split("").map((char, charIdx) => (
-            <span
-              key={`${lineIdx}-${charIdx}`}
-              className="hero-char inline-block"
-              style={{
-                /* Spaces need a minimum width or they collapse as inline-block */
-                ...(char === " " ? { width: "0.3em" } : {}),
-              }}
-            >
-              {char === " " ? "\u00A0" : char}
-            </span>
-          ))}
-        </span>
-      ))}
-    </h1>
+    <>
+      {/* The characters start hidden in CSS so a hard reload never flashes the
+          finished headline before GSAP takes over. Without scripting the
+          stagger never runs, so that has to be undone or the h1 stays blank. */}
+      <noscript
+        dangerouslySetInnerHTML={{
+          __html: "<style>.hero-char{opacity:1}</style>",
+        }}
+      />
+      <h1
+        ref={containerRef}
+        className="mt-4 font-display text-[2.6rem] leading-[1.06] font-bold tracking-tight text-ink sm:text-6xl lg:text-[4.15rem]"
+        style={{ perspective: "600px" }}
+      >
+        {lines.map((line, lineIdx) => (
+          <span
+            key={lineIdx}
+            className={`${lineIdx > 0 ? "mt-1 " : ""}block ${line.className ?? ""}`}
+          >
+            {line.text.split("").map((char, charIdx) => (
+              <span
+                key={`${lineIdx}-${charIdx}`}
+                className="hero-char inline-block"
+                style={{
+                  /* Spaces need a minimum width or they collapse as inline-block */
+                  ...(char === " " ? { width: "0.3em" } : {}),
+                }}
+              >
+                {char === " " ? "\u00A0" : char}
+              </span>
+            ))}
+          </span>
+        ))}
+      </h1>
+    </>
   );
 }

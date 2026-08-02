@@ -193,6 +193,50 @@
 }
 
 /* ------------------------------------------------------------------
+   Hero heading — GSAP character stagger
+
+   The characters have to start hidden in the *server* HTML. GSAP sets its
+   from-state in an effect, which runs after the first paint, so without this
+   a hard reload paints the finished headline for a frame, blinks it out, and
+   only then animates it in. Hiding here means the first paint is already the
+   from-state and the only thing the user sees is the animation.
+
+   Only desktop animates (see hero-heading.tsx), so only desktop hides.
+------------------------------------------------------------------ */
+
+@media (min-width: 1024px) {
+  .hero-char {
+    opacity: 0;
+  }
+
+  /* No animation runs under reduced motion — never hide the headline there. */
+  @media (prefers-reduced-motion: reduce) {
+    .hero-char {
+      opacity: 1;
+    }
+  }
+}
+
+/* ------------------------------------------------------------------
+   Hero image frame
+
+   An arch on the left, a softly-rounded rectangle on the right. The radii
+   are percentages so the offset gold hairline and the dashed inner rule —
+   which sit on larger and smaller boxes — trace the same silhouette without
+   three sets of hand-tuned numbers.
+------------------------------------------------------------------ */
+
+.hero-frame {
+  border-radius: 28% 1.5rem 1.5rem 28% / 34% 1.5rem 1.5rem 34%;
+}
+
+@media (min-width: 640px) {
+  .hero-frame {
+    border-radius: 30% 2.5rem 2.5rem 30% / 36% 2.5rem 2.5rem 36%;
+  }
+}
+
+/* ------------------------------------------------------------------
    Decorative leaves — GPU-only transforms, paused off-screen
 ------------------------------------------------------------------ */
 
@@ -204,7 +248,9 @@
   /* Parallax offset written by the scroll controller. */
   --leaf-y: 0px;
   --leaf-rot: 0deg;
-  transform: translate3d(0, var(--leaf-y, 0px), 0) rotate(var(--leaf-rot, 0deg));
+  --leaf-scale-x: 1;
+  --leaf-scale-y: 1;
+  transform: translate3d(0, var(--leaf-y, 0px), 0) rotate(var(--leaf-rot, 0deg)) scaleX(var(--leaf-scale-x, 1)) scaleY(var(--leaf-scale-y, 1));
   will-change: transform;
   backface-visibility: hidden;
   transform-style: preserve-3d;
