@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ShieldAlert } from "lucide-react";
+import { ContactAction } from "@/components/contact/contact-action";
 import { site } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -79,9 +80,9 @@ export default async function UnauthorizedPage({
 
         <p className="mt-6 text-[0.72rem] text-ink-soft">
           Need help? Call{" "}
-          <a href={site.phoneHref} className="font-semibold text-brand-crimson">
+          <ContactAction kind="phone" className="font-semibold text-brand-crimson">
             {site.phone}
-          </a>
+          </ContactAction>
         </p>
       </div>
     </main>

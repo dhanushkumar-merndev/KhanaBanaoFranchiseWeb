@@ -6,7 +6,6 @@ import { CheckCircle2, CircleDashed, Rocket, Store } from "lucide-react";
 import { toast } from "sonner";
 import {
   activateFranchise,
-  approveFranchise,
   goLive,
   moveToOngoingSupport,
 } from "@/app/actions/franchises";
@@ -28,10 +27,7 @@ import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { FRANCHISE_STATUS_LABELS, franchiseStatusTone } from "@/lib/domain/status";
 import { formatDate } from "@/lib/format";
 import type { FranchiseDetail } from "@/lib/data/pipeline";
-import type {
-  ActivationReadiness,
-  ApprovalReadiness,
-} from "@/app/actions/franchises";
+import type { ActivationReadiness } from "@/app/actions/franchises";
 
 function Gate({ met, label }: { met: boolean; label: string }) {
   return (
@@ -57,7 +53,6 @@ export function ActivationTab({
   leadId,
   leadName,
   franchise,
-  approval,
   activation,
   members,
   isAdmin,
@@ -65,12 +60,10 @@ export function ActivationTab({
   leadId: string;
   leadName: string;
   franchise: FranchiseDetail | null;
-  approval: ApprovalReadiness;
   activation: ActivationReadiness;
   members: { id: string; full_name: string }[];
   isAdmin: boolean;
 }) {
-  const [approveOpen, setApproveOpen] = useState(false);
   const [activateOpen, setActivateOpen] = useState(false);
   const [liveOpen, setLiveOpen] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
@@ -202,38 +195,6 @@ export function ActivationTab({
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Franchise approval</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ul className="space-y-2">
-            <Gate met={approval.applicationSubmitted} label="Application submitted" />
-            <Gate
-              met={approval.businessDiscussionRecorded}
-              label="Business discussion recorded"
-            />
-            <Gate met={approval.allDocumentsApproved} label="All documents approved" />
-          </ul>
-
-          {isAdmin && (
-            <Button
-              className="mt-4"
-              size="sm"
-              disabled={!approval.ready}
-              onClick={() => setApproveOpen(true)}
-            >
-              Approve franchise
-            </Button>
-          )}
-          {!approval.ready && (
-            <p className="mt-2 text-[0.75rem] text-ink-soft">
-              All three are required before a franchise can be approved.
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
           <CardTitle>Activation</CardTitle>
         </CardHeader>
         <CardContent>
@@ -261,7 +222,7 @@ export function ActivationTab({
         </CardContent>
       </Card>
 
-      {!approval.ready && !activation.ready && (
+      {!activation.ready && (
         <EmptyState
           title="Not ready for activation yet"
           body="Work through the application, documents, agreement and payment stages first — the checklists above track exactly what is outstanding."
@@ -271,11 +232,6 @@ export function ActivationTab({
 
       {isAdmin && (
         <>
-          <ApproveDialog
-            open={approveOpen}
-            onOpenChange={setApproveOpen}
-            leadId={leadId}
-          />
           <ActivateDialog
             open={activateOpen}
             onOpenChange={setActivateOpen}
@@ -402,81 +358,6 @@ function EmailChoiceForm({
 const ErrorContext = createContext<Record<string, string>>({});
 function useFieldError(name: string) {
   return useContext(ErrorContext)[name];
-}
-
-function ApproveDialog({
-  open,
-  onOpenChange,
-  leadId,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  leadId: string;
-}) {
-  return (
-    <EmailChoiceForm
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Approve this franchise"
-      description="Recorded against the application as the formal approval decision."
-      confirmLabel="Approve"
-      successMessage="Franchise approved."
-      onSubmit={(formData, sendEmail) =>
-        approveFranchise(leadId, formData, sendEmail)
-      }
-    >
-      <ApproveFields />
-    </EmailChoiceForm>
-  );
-}
-
-function ApproveFields() {
-  return (
-    <>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field
-          label="Approved territory"
-          htmlFor="ap-territory"
-          required
-          error={useFieldError("territory")}
-        >
-          <Input id="ap-territory" name="territory" placeholder="e.g. Coimbatore South" />
-        </Field>
-        <Field
-          label="Franchise model"
-          htmlFor="ap-model"
-          required
-          error={useFieldError("model")}
-        >
-          <Input id="ap-model" name="model" placeholder="e.g. Single territory" />
-        </Field>
-        <Field
-          label="Approved investment (₹)"
-          htmlFor="ap-investment"
-          error={useFieldError("investment")}
-        >
-          <Input id="ap-investment" name="investment" type="number" min="0" step="1" />
-        </Field>
-        <Field
-          label="Approval letter"
-          htmlFor="ap-letter"
-          error={useFieldError("letter")}
-          hint="PDF, optional."
-        >
-          <Input
-            id="ap-letter"
-            name="letter"
-            type="file"
-            accept="application/pdf"
-            className="h-auto py-2 file:mr-3 file:rounded-md file:border-0 file:bg-surface-muted file:px-3 file:py-1.5 file:text-[0.78rem] file:font-medium file:text-ink"
-          />
-        </Field>
-      </div>
-      <Field label="Approval notes" htmlFor="ap-notes">
-        <Textarea id="ap-notes" name="notes" rows={2} />
-      </Field>
-    </>
-  );
 }
 
 function ActivateDialog({

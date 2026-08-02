@@ -74,6 +74,9 @@ export default async function AdminLeadDetailPage({
             assignedMemberId={lead.assigned_member_id}
             members={members.map((m) => ({ id: m.id, full_name: m.full_name }))}
             isAdmin
+            businessDiscussionRecorded={lead.activities.some(
+              (activity) => activity.activity_type === "BUSINESS_DISCUSSION",
+            )}
           />
         </div>
 

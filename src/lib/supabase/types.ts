@@ -159,6 +159,13 @@ export type ApplicationTokenRow = {
   expires_at: string;
   used_at: string | null;
   revoked_at: string | null;
+  document_otp_hash: string | null;
+  document_otp_expires_at: string | null;
+  document_otp_attempts: number;
+  document_otp_sent_at: string | null;
+  document_otp_send_count: number;
+  document_otp_window_started_at: string | null;
+  document_otp_verified_at: string | null;
   created_by: string | null;
   created_at: string;
 };
@@ -379,6 +386,8 @@ type DefaultedKey =
   | "method"
   | "purpose"
   | "expires_at"
+  | "document_otp_attempts"
+  | "document_otp_send_count"
   | "round_robin_enabled"
   | "last_assigned_position"
   | "personal_details"

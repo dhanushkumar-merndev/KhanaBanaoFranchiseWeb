@@ -107,12 +107,14 @@ export function ApplicationTab({
   application,
   canManage,
   isAdmin,
+  businessDiscussionRecorded,
 }: {
   leadId: string;
   leadStatus: LeadStatus;
   application: ApplicationDetail | null;
   canManage: boolean;
   isAdmin: boolean;
+  businessDiscussionRecorded: boolean;
 }) {
   const router = useRouter();
   const [linkDialog, setLinkDialog] = useState(false);
@@ -123,6 +125,7 @@ export function ApplicationTab({
 
   const canSendLink =
     canManage &&
+    businessDiscussionRecorded &&
     (leadStatus === "ACCEPTED" || leadStatus === "APPLICATION_LINK_SENT");
 
   const submitted =
@@ -155,7 +158,9 @@ export function ApplicationTab({
         <EmptyState
           title="No application yet"
           body={
-            canSendLink
+            leadStatus === "ACCEPTED" && !businessDiscussionRecorded
+              ? "Record the business discussion from the action buttons above before sending the application link."
+              : canSendLink
               ? "Send the applicant their secure link and their answers will appear here."
               : "Accept this lead first, then send the application link."
           }

@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { GoogleButton } from "@/components/auth/google-button";
+import { ContactAction } from "@/components/contact/contact-action";
 import { images, site } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -59,12 +60,12 @@ export default async function LoginPage({
 
           <p className="mt-6 text-center text-[0.72rem] leading-relaxed text-ink-soft">
             Trouble signing in? <br></br>Contact your administrator or call{" "}
-            <a
-              href={site.phoneHref}
+            <ContactAction
+              kind="phone"
               className="font-semibold text-brand-crimson underline underline-offset-2"
             >
               {site.phone}
-            </a>
+            </ContactAction>
             .
           </p>
 

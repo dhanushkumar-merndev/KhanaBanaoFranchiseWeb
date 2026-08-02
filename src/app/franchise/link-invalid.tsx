@@ -1,4 +1,5 @@
 import { LinkIcon } from "lucide-react";
+import { ContactAction } from "@/components/contact/contact-action";
 import { site } from "@/lib/site";
 
 /**
@@ -22,18 +23,18 @@ export function LinkInvalid({ what = "link" }: { what?: string }) {
         and we will send a fresh link.
       </p>
       <div className="mt-6 flex flex-wrap justify-center gap-3">
-        <a
-          href={site.phoneHref}
+        <ContactAction
+          kind="phone"
           className="inline-flex h-10 items-center rounded-lg bg-brand-red px-5 text-[0.85rem] font-semibold text-white transition hover:bg-brand-crimson"
         >
           Call {site.phone}
-        </a>
-        <a
-          href={`mailto:${site.email}`}
+        </ContactAction>
+        <ContactAction
+          kind="email"
           className="inline-flex h-10 items-center rounded-lg border border-line px-5 text-[0.85rem] font-semibold text-ink transition hover:bg-surface-muted"
         >
           Email us
-        </a>
+        </ContactAction>
       </div>
     </div>
   );

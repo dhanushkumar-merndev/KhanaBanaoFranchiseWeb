@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleCheck, LoaderCircle, Send } from "lucide-react";
 import { toast } from "sonner";
 import { submitEnquiry } from "@/app/actions/enquiry";
+import { ContactAction } from "@/components/contact/contact-action";
 import { Leaf } from "@/components/decor/leaf";
 import { SectionHeading } from "@/components/landing/section-heading";
 import { Reveal } from "@/components/motion/reveal";
@@ -354,9 +355,9 @@ export function EnquiryForm() {
 
               <p className="mt-4 text-[0.8rem] text-ink-soft">
                 Prefer to talk?{" "}
-                <a href={site.phoneHref} className="font-semibold text-brand-crimson underline underline-offset-2">
+                <ContactAction kind="phone" className="font-semibold text-brand-crimson underline underline-offset-2">
                   {site.phone}
-                </a>
+                </ContactAction>
               </p>
             </form>
           )}

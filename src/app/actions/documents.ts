@@ -4,10 +4,12 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { requireAdmin, requireProfile } from "@/lib/auth/session";
 import { resolveToken } from "@/lib/data/tokens";
+import { hasDocumentAccess } from "@/lib/document-otp";
 import { overallDocumentStatus } from "@/lib/domain/documents";
 import {
   DOCUMENT_TYPES,
   DOCUMENT_TYPE_LABELS,
+  LEAD_STATUSES,
   STORAGE_BUCKETS,
   type DocumentStatus,
   type DocumentType,
@@ -161,6 +163,15 @@ export async function requestDocuments(
   if (!lead) return { ok: false, message: "That lead no longer exists." };
   if (!isAdmin(profile.role) && lead.assigned_member_id !== profile.id) {
     return { ok: false, message: "That lead is not assigned to you." };
+  }
+  if (
+    LEAD_STATUSES.indexOf(lead.current_status) >=
+    LEAD_STATUSES.indexOf("FRANCHISE_APPROVED")
+  ) {
+    return {
+      ok: false,
+      message: "Documents cannot be added after the franchise has been approved.",
+    };
   }
 
   const { data: application } = await supabase
@@ -411,6 +422,9 @@ export async function prepareDocumentUploads(
 ): Promise<ActionResult<{ uploads: PreparedDocumentUpload[] }>> {
   const resolved = await resolveToken(token, "DOCUMENTS");
   if (!resolved.ok) return { ok: false, message: "This link is no longer valid." };
+  if (!(await hasDocumentAccess(resolved.data.tokenId))) {
+    return { ok: false, message: "Verify your email before uploading documents." };
+  }
   if (!resolved.data.applicationId) {
     return { ok: false, message: "That application no longer exists." };
   }
@@ -520,6 +534,9 @@ export async function finalizeDocumentUploads(
 ): Promise<ActionResult<{ count: number }>> {
   const resolved = await resolveToken(token, "DOCUMENTS");
   if (!resolved.ok) return { ok: false, message: "This link is no longer valid." };
+  if (!(await hasDocumentAccess(resolved.data.tokenId))) {
+    return { ok: false, message: "Verify your email before uploading documents." };
+  }
   if (!resolved.data.applicationId) {
     return { ok: false, message: "That application no longer exists." };
   }
@@ -657,6 +674,9 @@ export async function discardDocumentUploads(
   const resolved = await resolveToken(token, "DOCUMENTS");
   if (!resolved.ok || !Array.isArray(receipts)) {
     return { ok: false, message: "This link is no longer valid." };
+  }
+  if (!(await hasDocumentAccess(resolved.data.tokenId))) {
+    return { ok: false, message: "Verify your email before uploading documents." };
   }
 
   const payloads = receipts

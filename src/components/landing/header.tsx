@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Menu, Phone, X } from "lucide-react";
+import { ContactAction } from "@/components/contact/contact-action";
 import { images, nav, site } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
@@ -112,13 +113,13 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <a
-            href={site.phoneHref}
+          <ContactAction
+            kind="phone"
             className="hidden items-center gap-2 rounded-full bg-brand-crimson px-4 py-2.5 text-sm font-semibold text-white shadow-[0_8px_20px_-10px_rgba(193,39,45,0.9)] transition hover:bg-brand-maroon focus-visible:outline-offset-4 sm:inline-flex"
           >
             <Phone className="size-4" strokeWidth={2.2} />
             <span>{site.phone}</span>
-          </a>
+          </ContactAction>
 
           <button
             type="button"
@@ -155,13 +156,14 @@ export function Header() {
               {item.label}
             </a>
           ))}
-          <a
-            href={site.phoneHref}
+          <ContactAction
+            kind="phone"
+            onClick={() => setOpen(false)}
             className="mt-2 inline-flex items-center justify-center gap-2 rounded-full bg-brand-crimson px-4 py-3.5 text-sm font-semibold text-white"
           >
             <Phone className="size-4" strokeWidth={2.2} />
             {site.phone}
-          </a>
+          </ContactAction>
         </nav>
       </div>
     </header>

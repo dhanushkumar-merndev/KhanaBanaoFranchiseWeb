@@ -90,6 +90,9 @@ export default async function MemberLeadDetailPage({
             assignedMemberId={lead.assigned_member_id}
             members={[]}
             isAdmin={false}
+            businessDiscussionRecorded={lead.activities.some(
+              (activity) => activity.activity_type === "BUSINESS_DISCUSSION",
+            )}
           />
         </div>
 

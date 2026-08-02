@@ -116,6 +116,7 @@ export function LeadTabPanel({
           application={pipeline.application}
           canManage={active}
           isAdmin={isAdmin}
+          businessDiscussionRecorded={approval.businessDiscussionRecorded}
         />
       );
     case "documents":
@@ -126,6 +127,8 @@ export function LeadTabPanel({
           hasApplication={Boolean(pipeline.application)}
           canRequest={active}
           isAdmin={isAdmin}
+          approval={approval}
+          franchiseApproved={pipeline.application?.status === "APPROVED"}
         />
       );
     case "agreement":
@@ -154,7 +157,6 @@ export function LeadTabPanel({
           leadId={lead.id}
           leadName={lead.full_name}
           franchise={pipeline.franchise}
-          approval={approval}
           activation={activation}
           members={members}
           isAdmin={isAdmin}

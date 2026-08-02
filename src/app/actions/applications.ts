@@ -55,6 +55,18 @@ export async function sendApplicationLink(
     return { ok: false, message: "That lead is not assigned to you." };
   }
 
+  const { count: discussions } = await supabase
+    .from("lead_activities")
+    .select("id", { count: "exact", head: true })
+    .eq("lead_id", leadId)
+    .eq("activity_type", "BUSINESS_DISCUSSION");
+  if ((discussions ?? 0) === 0) {
+    return {
+      ok: false,
+      message: "Record the business discussion before sending the application link.",
+    };
+  }
+
   const already = lead.current_status === "APPLICATION_LINK_SENT";
   if (!already && !canTransition(lead.current_status, "APPLICATION_LINK_SENT")) {
     return {

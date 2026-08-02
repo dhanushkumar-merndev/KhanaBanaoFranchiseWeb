@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import { ContactAction } from "@/components/contact/contact-action";
 import { images, site } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -35,13 +36,13 @@ export default function FranchiseLayout({
         <div className="mx-auto max-w-3xl px-4 py-5 text-[0.75rem] leading-relaxed text-ink-soft">
           <p>
             Need help? Call{" "}
-            <a href={site.phoneHref} className="text-brand-crimson hover:underline">
+            <ContactAction kind="phone" className="text-brand-crimson hover:underline">
               {site.phone}
-            </a>{" "}
+            </ContactAction>{" "}
             or email{" "}
-            <a href={`mailto:${site.email}`} className="text-brand-crimson hover:underline">
+            <ContactAction kind="email" className="text-brand-crimson hover:underline">
               {site.email}
-            </a>
+            </ContactAction>
             .
           </p>
           <p className="mt-1.5">

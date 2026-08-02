@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ContactAction } from "@/components/contact/contact-action";
 import { LEAD_SOURCE_LABELS } from "@/lib/domain/enums";
 import { formatDateTime, formatPhone } from "@/lib/format";
 import type { LeadDetail } from "@/lib/data/lead-detail";
@@ -29,12 +30,35 @@ export function OverviewTab({ lead }: { lead: LeadDetail }) {
         <CardContent>
           <dl>
             <Row label="Full name" value={lead.full_name} />
-            <Row label="Phone" value={formatPhone(lead.phone)} />
+            <Row
+              label="Phone"
+              value={
+                <ContactAction
+                  kind="phone"
+                  value={lead.phone}
+                  whatsapp={lead.whatsapp}
+                  className="hover:text-brand-crimson hover:underline hover:underline-offset-2"
+                >
+                  {formatPhone(lead.phone)}
+                </ContactAction>
+              }
+            />
             <Row
               label="WhatsApp"
               value={lead.whatsapp ? formatPhone(lead.whatsapp) : null}
             />
-            <Row label="Email" value={lead.email} />
+            <Row
+              label="Email"
+              value={
+                <ContactAction
+                  kind="email"
+                  value={lead.email}
+                  className="break-all hover:text-brand-crimson hover:underline hover:underline-offset-2"
+                >
+                  {lead.email}
+                </ContactAction>
+              }
+            />
             <Row label="City" value={lead.city} />
             <Row label="Source" value={LEAD_SOURCE_LABELS[lead.source]} />
             <Row label="Preferred territory" value={lead.preferred_territory} />

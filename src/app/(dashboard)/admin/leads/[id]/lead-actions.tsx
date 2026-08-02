@@ -90,18 +90,24 @@ type DialogKind =
  * Everything else is reachable through the pipeline, not through a wall of
  * buttons the user has to read past.
  */
-function availableActions(status: LeadStatus) {
+export function availableActions(
+  status: LeadStatus,
+  businessDiscussionRecorded: boolean,
+) {
   const early = status === "NEW" || status === "ASSIGNED";
   const inConversation =
     status === "CONTACTED" ||
     status === "BUSINESS_DISCUSSION" ||
     status === "FOLLOW_UP";
+  const acceptedAwaitingDiscussion =
+    status === "ACCEPTED" && !businessDiscussionRecorded;
 
   return {
     contact: early || inConversation,
-    discussion: early || inConversation,
-    followup: early || inConversation,
+    discussion: early || inConversation || acceptedAwaitingDiscussion,
+    followup: early || inConversation || acceptedAwaitingDiscussion,
     decide: inConversation,
+    acceptedAwaitingDiscussion,
   };
 }
 
@@ -111,18 +117,20 @@ export function LeadActions({
   assignedMemberId,
   members,
   isAdmin,
+  businessDiscussionRecorded,
 }: {
   leadId: string;
   status: LeadStatus;
   assignedMemberId: string | null;
   members: { id: string; full_name: string }[];
   isAdmin: boolean;
+  businessDiscussionRecorded: boolean;
 }) {
   const [dialog, setDialog] = useState<DialogKind>(null);
   const [assigning, setAssigning] = useState(false);
   const router = useRouter();
   const close = () => setDialog(null);
-  const available = availableActions(status);
+  const available = availableActions(status, businessDiscussionRecorded);
 
   const runAutoAssign = async () => {
     setAssigning(true);
@@ -152,7 +160,11 @@ export function LeadActions({
         {available.discussion && (
           <Button
             size="sm"
-            variant={available.contact ? "outline" : "primary"}
+            variant={
+              available.contact && !available.acceptedAwaitingDiscussion
+                ? "outline"
+                : "primary"
+            }
             onClick={() => setDialog("discussion")}
           >
             <MessageSquarePlus />
@@ -204,12 +216,22 @@ export function LeadActions({
         <LogContactDialog leadId={leadId} onDone={close} />
       )}
       {dialog === "discussion" && (
-        <DiscussionDialog leadId={leadId} onDone={close} />
+        <DiscussionDialog
+          leadId={leadId}
+          leadAlreadyAccepted={status === "ACCEPTED"}
+          onDone={close}
+        />
       )}
       {dialog === "followup" && (
         <FollowupDialog leadId={leadId} onDone={close} />
       )}
-      {dialog === "accept" && <AcceptDialog leadId={leadId} onDone={close} />}
+      {dialog === "accept" && (
+        <AcceptDialog
+          leadId={leadId}
+          businessDiscussionRecorded={businessDiscussionRecorded}
+          onDone={close}
+        />
+      )}
       {dialog === "reject" && <RejectDialog leadId={leadId} onDone={close} />}
       {dialog === "reassign" && (
         <ReassignDialog
@@ -321,9 +343,11 @@ function LogContactDialog({
 
 function DiscussionDialog({
   leadId,
+  leadAlreadyAccepted,
   onDone,
 }: {
   leadId: string;
+  leadAlreadyAccepted: boolean;
   onDone: () => void;
 }) {
   const router = useRouter();
@@ -343,7 +367,7 @@ function DiscussionDialog({
       investmentDiscussed: "",
       territoryDiscussed: "",
       interestLevel: "",
-      outcome: "FOLLOW_UP_REQUIRED",
+      outcome: leadAlreadyAccepted ? "ACCEPTED" : "FOLLOW_UP_REQUIRED",
       nextFollowupAt: "",
       rejectionReason: "",
       notes: "",
@@ -631,7 +655,15 @@ function FollowupDialog({
 
 // -------------------------------------------------------------------
 
-function AcceptDialog({ leadId, onDone }: { leadId: string; onDone: () => void }) {
+function AcceptDialog({
+  leadId,
+  businessDiscussionRecorded,
+  onDone,
+}: {
+  leadId: string;
+  businessDiscussionRecorded: boolean;
+  onDone: () => void;
+}) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
 
@@ -643,7 +675,11 @@ function AcceptDialog({ leadId, onDone }: { leadId: string; onDone: () => void }
         toast.error(result.message);
         return;
       }
-      toast.success("Lead accepted. You can now send the application link.");
+      toast.success(
+        businessDiscussionRecorded
+          ? "Lead accepted. You can now send the application link."
+          : "Lead accepted. Record the business discussion next.",
+      );
       router.refresh();
       onDone();
     } finally {
@@ -657,13 +693,16 @@ function AcceptDialog({ leadId, onDone }: { leadId: string; onDone: () => void }
         <DialogHeader>
           <DialogTitle>Accept this lead?</DialogTitle>
           <DialogDescription>
-            They move to the application stage.
+            {businessDiscussionRecorded
+              ? "They move to the application stage."
+              : "They move to the business-discussion step."}
           </DialogDescription>
         </DialogHeader>
         <DialogBody>
           <p className="text-[0.82rem] leading-relaxed text-ink-soft">
-            Accepting does not send anything yet. The next step is to send the
-            secure application link from this page.
+            {businessDiscussionRecorded
+              ? "Accepting does not send anything yet. The next step is to send the secure application link from this page."
+              : "Accepting does not send anything yet. Record the business discussion before sending the application link."}
           </p>
         </DialogBody>
         <DialogFooter>

@@ -6,6 +6,7 @@ import {
   Phone,
   User,
 } from "lucide-react";
+import { ContactAction } from "@/components/contact/contact-action";
 import { Badge, StatusBadge } from "@/components/ui/badge";
 import { LEAD_STATUS_LABELS } from "@/lib/domain/enums";
 import { leadStatusTone } from "@/lib/domain/status";
@@ -59,15 +60,24 @@ export function LeadHeader({ lead }: { lead: LeadDetail }) {
 
       <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Detail icon={Phone} label="Phone">
-          <a href={`tel:${lead.phone}`} className="hover:text-brand-crimson">
+          <ContactAction
+            kind="phone"
+            value={lead.phone}
+            whatsapp={lead.whatsapp}
+            className="hover:text-brand-crimson hover:underline hover:underline-offset-2"
+          >
             {formatPhone(lead.phone)}
-          </a>
+          </ContactAction>
         </Detail>
 
         <Detail icon={Mail} label="Email">
-          <a href={`mailto:${lead.email}`} className="hover:text-brand-crimson">
+          <ContactAction
+            kind="email"
+            value={lead.email}
+            className="hover:text-brand-crimson hover:underline hover:underline-offset-2"
+          >
             {lead.email}
-          </a>
+          </ContactAction>
         </Detail>
 
         <Detail icon={MapPin} label="City">

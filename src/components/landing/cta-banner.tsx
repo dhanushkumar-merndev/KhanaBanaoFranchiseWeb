@@ -1,4 +1,5 @@
 import { Phone } from "lucide-react";
+import { ContactAction } from "@/components/contact/contact-action";
 import { Leaf } from "@/components/decor/leaf";
 import { WhatsappIcon } from "@/components/landing/icons";
 import { Reveal } from "@/components/motion/reveal";
@@ -42,13 +43,13 @@ export function CtaBanner() {
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row">
-                <a
-                  href={site.phoneHref}
+                <ContactAction
+                  kind="phone"
                   className="inline-flex items-center justify-center gap-2.5 rounded-full bg-white px-6 py-3.5 text-sm font-semibold text-brand-crimson shadow-[0_12px_26px_-14px_rgba(0,0,0,0.6)] transition hover:-translate-y-0.5 hover:bg-canvas"
                 >
                   <Phone className="size-4" strokeWidth={2.3} />
                   {site.phone}
-                </a>
+                </ContactAction>
                 <a
                   href={site.whatsappHref}
                   target="_blank"

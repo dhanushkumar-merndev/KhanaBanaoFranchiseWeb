@@ -1,8 +1,14 @@
 import type { Metadata } from "next";
 import { resolveToken, touchToken } from "@/lib/data/tokens";
+import {
+  documentOtpGateState,
+  hasDocumentAccess,
+  maskEmail,
+} from "@/lib/document-otp";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { LinkInvalid } from "@/app/franchise/link-invalid";
 import { UploadList, type UploadRow } from "./upload-list";
+import { DocumentOtpGate } from "./otp-gate";
 
 export const metadata: Metadata = {
   title: "Upload your documents",
@@ -24,9 +30,29 @@ export default async function DocumentUploadPage({
   const { lead, applicationId, tokenId } = resolved.data;
   if (!applicationId) return <LinkInvalid what="upload link" />;
 
-  await touchToken(tokenId);
-
   const supabase = createAdminClient();
+
+  if (!(await hasDocumentAccess(tokenId))) {
+    const { data: challenge } = await supabase
+      .from("application_tokens")
+      .select(
+        "document_otp_hash, document_otp_expires_at, document_otp_attempts, document_otp_sent_at",
+      )
+      .eq("id", tokenId)
+      .maybeSingle();
+    const { initialCodeSent, initialCooldown } =
+      documentOtpGateState(challenge);
+    return (
+      <DocumentOtpGate
+        token={token}
+        maskedEmail={maskEmail(lead.email)}
+        initialCodeSent={initialCodeSent}
+        initialCooldown={initialCooldown}
+      />
+    );
+  }
+
+  await touchToken(tokenId);
 
   const { data: requests } = await supabase
     .from("document_requests")

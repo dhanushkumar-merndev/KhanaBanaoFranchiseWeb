@@ -2,6 +2,7 @@
 
 import * as Accordion from "@radix-ui/react-accordion";
 import { Plus } from "lucide-react";
+import { ContactAction } from "@/components/contact/contact-action";
 import { Leaf } from "@/components/decor/leaf";
 import { SectionHeading } from "@/components/landing/section-heading";
 import { Reveal } from "@/components/motion/reveal";
@@ -52,12 +53,12 @@ export function Faq() {
         <Reveal delay={160}>
           <p className="mt-8 text-center text-[0.9rem] text-ink-soft">
             Still have a question?{" "}
-            <a
-              href={site.phoneHref}
+            <ContactAction
+              kind="phone"
               className="font-semibold text-brand-crimson underline underline-offset-4 hover:text-brand-maroon"
             >
               Call {site.phone}
-            </a>{" "}
+            </ContactAction>{" "}
             or{" "}
             <a
               href="#enquiry"

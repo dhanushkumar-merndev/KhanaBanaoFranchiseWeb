@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Mail, MapPin, Phone } from "lucide-react";
+import { ContactAction } from "@/components/contact/contact-action";
 import { Leaf } from "@/components/decor/leaf";
 import {
   FacebookIcon,
@@ -81,22 +82,22 @@ export function Footer() {
           </h2>
           <ul className="mt-4 space-y-3 text-[0.88rem] text-ink-soft">
             <li>
-              <a
-                href={site.phoneHref}
+              <ContactAction
+                kind="phone"
                 className="flex items-center gap-2.5 transition hover:text-brand-crimson"
               >
                 <Phone className="size-4 shrink-0 text-brand-red" strokeWidth={1.8} />
                 {site.phone}
-              </a>
+              </ContactAction>
             </li>
             <li>
-              <a
-                href={`mailto:${site.email}`}
+              <ContactAction
+                kind="email"
                 className="flex items-center gap-2.5 transition hover:text-brand-crimson"
               >
                 <Mail className="size-4 shrink-0 text-brand-red" strokeWidth={1.8} />
                 {site.email}
-              </a>
+              </ContactAction>
             </li>
             <li className="flex items-center gap-2.5">
               <MapPin className="size-4 shrink-0 text-brand-red" strokeWidth={1.8} />

@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox, Field, Label, Textarea } from "@/components/ui/field";
 import { EmptyState } from "@/components/ui/feedback";
+import { FranchiseApprovalPanel } from "@/components/leads/franchise-approval";
 import {
   DOCUMENT_TYPES,
   DOCUMENT_TYPE_LABELS,
@@ -45,6 +46,7 @@ import {
 import { DOCUMENT_STATUS_LABELS, documentStatusTone } from "@/lib/domain/status";
 import { formatBytes, formatDateTime } from "@/lib/format";
 import type { DocumentRow } from "@/lib/data/pipeline";
+import type { ApprovalReadiness } from "@/app/actions/franchises";
 
 export function DocumentsTab({
   leadId,
@@ -52,19 +54,23 @@ export function DocumentsTab({
   hasApplication,
   canRequest,
   isAdmin,
+  approval,
+  franchiseApproved,
 }: {
   leadId: string;
   documents: DocumentRow[];
   hasApplication: boolean;
   canRequest: boolean;
   isAdmin: boolean;
+  approval: ApprovalReadiness;
+  franchiseApproved: boolean;
 }) {
   const [requestOpen, setRequestOpen] = useState(false);
   const [issuedUrl, setIssuedUrl] = useState<string | null>(null);
 
   const alreadyRequested = new Set(documents.map((row) => row.documentType));
 
-  const requestButton = canRequest && hasApplication && (
+  const requestButton = canRequest && hasApplication && !franchiseApproved && (
     <Button size="sm" onClick={() => setRequestOpen(true)}>
       <FilePlus2 />
       Request documents
@@ -111,6 +117,15 @@ export function DocumentsTab({
             />
           ))}
         </ul>
+      )}
+
+      {documents.length > 0 && (
+        <FranchiseApprovalPanel
+          leadId={leadId}
+          approval={approval}
+          franchiseApproved={franchiseApproved}
+          isAdmin={isAdmin}
+        />
       )}
 
       {requestOpen && (

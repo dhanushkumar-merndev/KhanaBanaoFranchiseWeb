@@ -15,6 +15,7 @@ export const TEMPLATE_VARIABLES = [
   "training_date",
   "support_name",
   "support_phone",
+  "verification_code",
 ] as const;
 
 export type TemplateVariable = (typeof TEMPLATE_VARIABLES)[number];
