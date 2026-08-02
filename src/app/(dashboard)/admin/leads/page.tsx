@@ -26,6 +26,7 @@ export default async function AdminLeadsPage({
   const createDialog = (
     <CreateLeadDialog
       canAssign
+      leadBasePath="/admin/leads"
       members={members.map((m) => ({ id: m.id, full_name: m.full_name }))}
     />
   );

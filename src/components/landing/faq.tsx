@@ -40,7 +40,7 @@ export function Faq() {
                   </Accordion.Trigger>
                 </Accordion.Header>
                 <Accordion.Content className="overflow-hidden data-[state=closed]:animate-[accordion-up_220ms_ease-out] data-[state=open]:animate-[accordion-down_220ms_ease-out]">
-                  <p className="px-5 pb-5 text-[0.82rem] leading-relaxed text-ink-soft sm:px-6">
+                  <p className="px-5 pb-5 text-[0.92rem] leading-relaxed text-ink-soft sm:px-6">
                     {faq.a}
                   </p>
                 </Accordion.Content>
@@ -50,7 +50,7 @@ export function Faq() {
         </Reveal>
 
         <Reveal delay={160}>
-          <p className="mt-8 text-center text-[0.8rem] text-ink-soft">
+          <p className="mt-8 text-center text-[0.9rem] text-ink-soft">
             Still have a question?{" "}
             <a
               href={site.phoneHref}

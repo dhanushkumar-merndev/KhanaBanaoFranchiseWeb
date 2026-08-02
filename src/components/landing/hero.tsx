@@ -20,14 +20,13 @@ export function Hero() {
           right entirely: the image frame carries its own sprig, and anything
           floating beside it competes with the silhouette. */}
       <Leaf src="/decor/leaf-sprig.svg" className="-left-8 top-[26rem] w-14 md:left-[-4%] md:top-28 md:w-28" speed={0.14} rotate={-8} sway opacity={0.8} />
-      <Leaf src="/decor/leaf-basil.svg" className="right-[44%] top-4 w-10 md:w-16" speed={0.18} rotate={-14} sway swayDelay={0.3} opacity={0.9} desktopOnly />
       <Leaf src="/decor/leaf-mint.svg" className="bottom-28 left-[6%] w-10 md:w-14" speed={-0.1} rotate={12} sway swayDelay={1.2} desktopOnly />
 
       <div className="shell grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.06fr)] lg:gap-8">
         {/* ---------------- Copy ---------------- */}
         <div className="relative z-10 max-w-xl">
           <Reveal>
-            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-ink-soft">
+            <p className="text-[0.8rem] font-semibold uppercase tracking-[0.24em] text-ink-soft">
               Join a brand. Build success.
             </p>
           </Reveal>
@@ -54,7 +53,7 @@ export function Hero() {
             <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
               <a
                 href="#enquiry"
-                className="group inline-flex items-center gap-3 rounded-full bg-brand-crimson px-7 py-4 text-[0.82rem] font-semibold uppercase tracking-[0.1em] text-white shadow-[0_16px_34px_-16px_rgba(193,39,45,0.95)] transition hover:-translate-y-0.5 hover:bg-brand-maroon hover:shadow-[0_20px_40px_-16px_rgba(142,18,24,0.95)]"
+                className="group inline-flex items-center gap-3 rounded-full bg-brand-crimson px-7 py-4 text-[0.9rem] font-semibold uppercase tracking-[0.1em] text-white shadow-[0_16px_34px_-16px_rgba(193,39,45,0.95)] transition hover:-translate-y-0.5 hover:bg-brand-maroon hover:shadow-[0_20px_40px_-16px_rgba(142,18,24,0.95)]"
               >
                 Start Your Journey
                 <span className="grid size-6 place-items-center rounded-full bg-white/20 transition group-hover:translate-x-0.5">
@@ -70,7 +69,7 @@ export function Hero() {
                   <span className="absolute inset-0 rounded-full ring-1 ring-brand-red/20 transition group-hover:animate-ping" />
                   <Play className="size-4 translate-x-px fill-current" strokeWidth={0} />
                 </span>
-                <span className="text-[0.68rem] font-semibold uppercase tracking-[0.16em]">
+                <span className="text-[0.8rem] font-semibold uppercase tracking-[0.16em]">
                   Watch how it works
                 </span>
               </a>
@@ -85,7 +84,7 @@ export function Hero() {
                   <span className="grid size-9 shrink-0 place-items-center rounded-full border border-brand-red/25 bg-surface text-brand-crimson shadow-[0_4px_12px_-8px_rgba(193,39,45,0.8)]">
                     <Icon name={badge.icon} className="size-4" />
                   </span>
-                  <span className="whitespace-pre-line text-[0.68rem] font-medium leading-tight text-ink-soft">
+                  <span className="whitespace-pre-line text-[0.8rem] font-medium leading-tight text-ink-soft">
                     {badge.label}
                   </span>
                 </li>
@@ -124,21 +123,15 @@ export function Hero() {
               />
             </div>
 
-            {/* One sprig. It sits in the gap the arch opens at the top left,
-                where the shape curves away from its box — the frame carries
-                itself, so more decoration crowds the silhouette rather than
-                framing it.
-
-                Low speed on purpose: parallax plus sway can lift a leaf
-                40-odd pixels, enough to carry it off the open corner and
-                onto the photo. */}
+            {/* Leaves balance the open corners outside the photo silhouette. */}
             <div className="pointer-events-none absolute inset-0 z-10">
               <Leaf src="/decor/leaf-sprig.svg" className="-top-5 left-[7%] w-14 md:-top-7 md:left-[9%] md:w-20" speed={-0.05} rotate={-14} sway swayDelay={0.4} opacity={0.9} />
+              <Leaf src="/decor/leaf-basil.svg" className="right-[-4.5rem] top-[14%] w-16 md:-right-24 md:w-24" speed={0.06} rotate={28} sway swayDelay={0.8} opacity={0.85} />
             </div>
 
             {/* "Stronger Together" seal */}
             {/* z-20 keeps the seal above the decor layer, which is z-10. */}
-            <div className="absolute -bottom-4 right-2 z-20 sm:bottom-auto sm:right-0 sm:top-1/2 sm:-translate-y-1/2 lg:-right-2">
+            <div className="absolute bottom-3 left-3 z-20 sm:bottom-auto sm:left-0 sm:top-1/2 sm:-translate-x-[58%] sm:-translate-y-1/2">
               <div className="grid size-[8.5rem] place-items-center rounded-full bg-gradient-to-br from-brand-maroon to-brand-maroon-dark p-1.5 text-center shadow-[0_22px_44px_-18px_rgba(109,13,18,0.9)] sm:size-[10.5rem]">
                 <div className="grid size-full place-items-center rounded-full border border-dashed border-brand-gold-light/60 px-3">
                   <div>
@@ -147,7 +140,7 @@ export function Hero() {
                       strokeWidth={1.8}
                       aria-hidden="true"
                     />
-                    <p className="mt-1.5 font-display text-[0.6rem] font-semibold uppercase leading-snug tracking-[0.1em] text-white sm:text-[0.72rem]">
+                    <p className="mt-1.5 font-display text-[0.8rem] font-semibold uppercase leading-snug tracking-[0.1em] text-white">
                       Your Success.
                       <br />
                       Our System.

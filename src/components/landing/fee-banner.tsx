@@ -24,16 +24,16 @@ export function FeeBanner() {
                   aria-hidden="true"
                   className="absolute left-0 top-1/2 hidden h-24 w-px -translate-y-1/2 bg-gradient-to-b from-transparent via-brand-gold-light/40 to-transparent sm:block lg:hidden"
                 />
-                <p className="font-display text-[0.78rem] font-bold uppercase leading-snug tracking-[0.16em] text-brand-gold-light">
+                <p className="font-display text-[0.88rem] font-bold uppercase leading-snug tracking-[0.16em] text-brand-gold-light">
                   One-Time
                   <br />
                   Franchise Fee
                 </p>
-                <p className="mt-2 font-display text-5xl font-bold tracking-tight text-white sm:text-[3.4rem]">
+                <p className="kpi-number mt-2 text-5xl text-white sm:text-[3.4rem]">
                   <span className="align-top text-3xl sm:text-4xl">₹</span>
                   {franchiseFee.display}
                 </p>
-                <p className="mt-3 inline-flex rounded-full bg-gradient-to-r from-brand-gold-light to-brand-gold px-6 py-1.5 text-[0.7rem] font-bold uppercase tracking-[0.2em] text-brand-maroon-dark shadow-sm">
+                <p className="mt-3 inline-flex rounded-full bg-gradient-to-r from-brand-gold-light to-brand-gold px-6 py-1.5 text-[0.8rem] font-bold uppercase tracking-[0.2em] text-brand-maroon-dark shadow-sm">
                   Only
                 </p>
               </div>
@@ -53,7 +53,7 @@ export function FeeBanner() {
                       className="size-9 text-brand-gold-light"
                       strokeWidth={1.4}
                     />
-                    <p className="max-w-[13rem] text-[0.76rem] leading-snug text-white/90">
+                    <p className="max-w-[15rem] text-[0.86rem] leading-snug text-white/90">
                       {item.body}
                     </p>
                   </li>

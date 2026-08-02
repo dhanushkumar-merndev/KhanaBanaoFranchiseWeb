@@ -93,7 +93,7 @@ export function Header() {
                 href={linkTo(item.href)}
                 aria-current={isActive ? "true" : undefined}
                 className={cn(
-                  "relative rounded-full px-3 py-2 text-[0.83rem] font-medium transition-colors",
+                  "relative rounded-full px-3 py-2 text-[0.92rem] font-medium transition-colors",
                   isActive
                     ? "text-brand-crimson"
                     : "text-ink-soft hover:text-brand-crimson",

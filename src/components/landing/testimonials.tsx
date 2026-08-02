@@ -48,7 +48,7 @@ export function Testimonials() {
                   ))}
                 </div>
 
-                <blockquote className="mt-4 flex-1 text-[0.83rem] font-medium leading-relaxed text-ink">
+                <blockquote className="mt-4 flex-1 text-[0.92rem] font-medium leading-relaxed text-ink">
                   {item.quote}
                 </blockquote>
 
@@ -57,10 +57,10 @@ export function Testimonials() {
                     <User className="size-4" strokeWidth={1.8} aria-hidden="true" />
                   </span>
                   <span className="text-left">
-                    <span className="block text-[0.8rem] font-semibold text-ink">
+                    <span className="block text-[0.9rem] font-semibold text-ink">
                       – {item.name}
                     </span>
-                    <span className="block text-[0.7rem] text-ink-soft">
+                    <span className="block text-[0.8rem] text-ink-soft">
                       {item.city}
                     </span>
                   </span>

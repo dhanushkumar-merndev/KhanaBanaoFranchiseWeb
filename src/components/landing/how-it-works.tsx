@@ -41,7 +41,7 @@ export function HowItWorks() {
                 <h3 className="font-display text-base font-bold text-ink">
                   {step.title}
                 </h3>
-                <p className="max-w-[14rem] text-[0.72rem] leading-snug text-ink-soft">
+                <p className="max-w-[15rem] text-[0.84rem] leading-snug text-ink-soft">
                   {step.body}
                 </p>
               </Reveal>

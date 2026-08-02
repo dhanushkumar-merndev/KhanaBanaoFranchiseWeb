@@ -35,7 +35,7 @@ export function CtaBanner() {
                     Ready to start your
                     <br className="hidden sm:block" /> {site.name} franchise?
                   </h2>
-                  <p className="mt-2 text-[0.8rem] text-white/80">
+                  <p className="mt-2 text-[0.9rem] text-white/80">
                     Let&rsquo;s build success together.
                   </p>
                 </div>

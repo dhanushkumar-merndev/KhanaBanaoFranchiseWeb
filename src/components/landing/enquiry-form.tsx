@@ -23,7 +23,7 @@ const fieldClass =
 function FieldError({ id, message }: { id: string; message?: string }) {
   if (!message) return null;
   return (
-    <p id={id} role="alert" className="mt-1.5 text-[0.72rem] font-medium text-danger">
+    <p id={id} role="alert" className="mt-1.5 text-[0.82rem] font-medium text-danger">
       {message}
     </p>
   );
@@ -81,7 +81,7 @@ export function EnquiryForm() {
       <div className="shell relative max-w-4xl">
         <SectionHeading>Become a Franchise Partner</SectionHeading>
         <Reveal delay={80}>
-          <p className="mx-auto mt-5 max-w-xl text-center text-[0.85rem] leading-relaxed text-ink-soft">
+          <p className="mx-auto mt-5 max-w-xl text-center text-[0.95rem] leading-relaxed text-ink-soft">
             Tell us a little about yourself. A franchise advisor will call you
             within one working day — no obligation, no pressure.
           </p>
@@ -99,7 +99,7 @@ export function EnquiryForm() {
               <h3 className="mt-5 font-display text-xl font-bold text-ink">
                 Thank you — we have your enquiry
               </h3>
-              <p className="mx-auto mt-3 max-w-md text-[0.85rem] leading-relaxed text-ink-soft">
+              <p className="mx-auto mt-3 max-w-md text-[0.95rem] leading-relaxed text-ink-soft">
                 Your reference is{" "}
                 <strong className="font-semibold text-brand-crimson">
                   {leadNumber}
@@ -133,7 +133,7 @@ export function EnquiryForm() {
             >
               <div className="grid gap-5 sm:grid-cols-2">
                 <div className="sm:col-span-2">
-                  <label htmlFor="fullName" className="mb-1.5 block text-[0.78rem] font-semibold text-ink">
+                  <label htmlFor="fullName" className="mb-1.5 block text-[0.88rem] font-semibold text-ink">
                     Full name <span className="text-brand-red">*</span>
                   </label>
                   <input
@@ -149,7 +149,7 @@ export function EnquiryForm() {
                 </div>
 
                 <div>
-                  <label htmlFor="phone" className="mb-1.5 block text-[0.78rem] font-semibold text-ink">
+                  <label htmlFor="phone" className="mb-1.5 block text-[0.88rem] font-semibold text-ink">
                     Phone number <span className="text-brand-red">*</span>
                   </label>
                   <input
@@ -167,7 +167,7 @@ export function EnquiryForm() {
                 </div>
 
                 <div>
-                  <label htmlFor="whatsapp" className="mb-1.5 block text-[0.78rem] font-semibold text-ink">
+                  <label htmlFor="whatsapp" className="mb-1.5 block text-[0.88rem] font-semibold text-ink">
                     WhatsApp number
                   </label>
                   <input
@@ -184,7 +184,7 @@ export function EnquiryForm() {
                 </div>
 
                 <div>
-                  <label htmlFor="email" className="mb-1.5 block text-[0.78rem] font-semibold text-ink">
+                  <label htmlFor="email" className="mb-1.5 block text-[0.88rem] font-semibold text-ink">
                     Email <span className="text-brand-red">*</span>
                   </label>
                   <input
@@ -202,7 +202,7 @@ export function EnquiryForm() {
                 </div>
 
                 <div>
-                  <label htmlFor="city" className="mb-1.5 block text-[0.78rem] font-semibold text-ink">
+                  <label htmlFor="city" className="mb-1.5 block text-[0.88rem] font-semibold text-ink">
                     City <span className="text-brand-red">*</span>
                   </label>
                   <input
@@ -218,7 +218,7 @@ export function EnquiryForm() {
                 </div>
 
                 <div>
-                  <label htmlFor="preferredTerritory" className="mb-1.5 block text-[0.78rem] font-semibold text-ink">
+                  <label htmlFor="preferredTerritory" className="mb-1.5 block text-[0.88rem] font-semibold text-ink">
                     Preferred territory
                   </label>
                   <input
@@ -230,7 +230,7 @@ export function EnquiryForm() {
                 </div>
 
                 <div>
-                  <label htmlFor="investmentRange" className="mb-1.5 block text-[0.78rem] font-semibold text-ink">
+                  <label htmlFor="investmentRange" className="mb-1.5 block text-[0.88rem] font-semibold text-ink">
                     Investment range
                   </label>
                   <select
@@ -249,7 +249,7 @@ export function EnquiryForm() {
                 </div>
 
                 <div>
-                  <label htmlFor="currentOccupation" className="mb-1.5 block text-[0.78rem] font-semibold text-ink">
+                  <label htmlFor="currentOccupation" className="mb-1.5 block text-[0.88rem] font-semibold text-ink">
                     Current occupation
                   </label>
                   <input
@@ -261,7 +261,7 @@ export function EnquiryForm() {
                 </div>
 
                 <div>
-                  <label htmlFor="existingBusiness" className="mb-1.5 block text-[0.78rem] font-semibold text-ink">
+                  <label htmlFor="existingBusiness" className="mb-1.5 block text-[0.88rem] font-semibold text-ink">
                     Existing business
                   </label>
                   <input
@@ -273,7 +273,7 @@ export function EnquiryForm() {
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label htmlFor="message" className="mb-1.5 block text-[0.78rem] font-semibold text-ink">
+                  <label htmlFor="message" className="mb-1.5 block text-[0.88rem] font-semibold text-ink">
                     Anything you would like to tell us?
                   </label>
                   <textarea
@@ -294,7 +294,7 @@ export function EnquiryForm() {
               </div>
 
               <div className="mt-6">
-                <label className="flex cursor-pointer items-start gap-3 text-[0.78rem] leading-relaxed text-ink-soft">
+                <label className="flex cursor-pointer items-start gap-3 text-[0.88rem] leading-relaxed text-ink-soft">
                   <input
                     type="checkbox"
                     className="mt-0.5 size-4 shrink-0 rounded border-line text-brand-red accent-[#c1272d]"
@@ -312,7 +312,7 @@ export function EnquiryForm() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="mt-7 inline-flex w-full items-center justify-center gap-2.5 rounded-full bg-brand-crimson px-8 py-4 text-[0.82rem] font-semibold uppercase tracking-[0.1em] text-white shadow-[0_16px_34px_-16px_rgba(193,39,45,0.95)] transition hover:bg-brand-maroon disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+                className="mt-7 inline-flex w-full items-center justify-center gap-2.5 rounded-full bg-brand-crimson px-8 py-4 text-[0.9rem] font-semibold uppercase tracking-[0.1em] text-white shadow-[0_16px_34px_-16px_rgba(193,39,45,0.95)] transition hover:bg-brand-maroon disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
               >
                 {isSubmitting ? (
                   <>
@@ -327,7 +327,7 @@ export function EnquiryForm() {
                 )}
               </button>
 
-              <p className="mt-4 text-[0.7rem] text-ink-soft">
+              <p className="mt-4 text-[0.8rem] text-ink-soft">
                 Prefer to talk?{" "}
                 <a href={site.phoneHref} className="font-semibold text-brand-crimson underline underline-offset-2">
                   {site.phone}

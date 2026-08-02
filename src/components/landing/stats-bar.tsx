@@ -23,10 +23,10 @@ export function StatsBar() {
                 strokeWidth={1.5}
               />
               <div>
-                <p className="font-display text-xl font-bold leading-none text-brand-crimson sm:text-2xl md:text-[1.7rem]">
+                <p className="kpi-number text-xl leading-none text-brand-crimson sm:text-2xl md:text-[1.7rem]">
                   <CountUp value={stat.value} suffix={stat.suffix} />
                 </p>
-                <p className="mt-1.5 text-[0.7rem] font-medium text-ink-soft sm:text-xs">
+                <p className="mt-1.5 text-[0.8rem] font-medium text-ink-soft sm:text-sm">
                   {stat.label}
                 </p>
               </div>

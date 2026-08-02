@@ -33,7 +33,7 @@ export function Footer() {
             height={images.logoHeight}
             className="h-12 w-auto"
           />
-          <p className="mt-4 max-w-xs text-[0.78rem] leading-relaxed text-ink-soft">
+          <p className="mt-4 max-w-sm text-[0.88rem] leading-relaxed text-ink-soft">
             Premium event, wedding and corporate catering experiences — crafted
             with passion, delivered with perfection.
           </p>
@@ -66,7 +66,7 @@ export function Footer() {
               <li key={item.href}>
                 <a
                   href={item.href}
-                  className="text-[0.78rem] text-ink-soft transition hover:text-brand-crimson"
+                  className="text-[0.88rem] text-ink-soft transition hover:text-brand-crimson"
                 >
                   {item.label}
                 </a>
@@ -79,7 +79,7 @@ export function Footer() {
           <h2 className="font-display text-sm font-bold uppercase tracking-[0.14em] text-ink">
             Contact Us
           </h2>
-          <ul className="mt-4 space-y-3 text-[0.78rem] text-ink-soft">
+          <ul className="mt-4 space-y-3 text-[0.88rem] text-ink-soft">
             <li>
               <a
                 href={site.phoneHref}
@@ -104,7 +104,7 @@ export function Footer() {
             </li>
           </ul>
 
-          <ul className="mt-5 flex gap-4 text-[0.72rem] text-ink-soft">
+          <ul className="mt-5 flex gap-4 text-[0.82rem] text-ink-soft">
             <li>
               <Link href="/privacy" className="transition hover:text-brand-crimson">
                 Privacy Policy
@@ -125,7 +125,7 @@ export function Footer() {
       </div>
 
       <div className="relative bg-brand-maroon-dark py-3.5 text-center">
-        <p className="text-[0.7rem] text-white/70">
+        <p className="text-[0.8rem] text-white/70">
           © {new Date().getFullYear()} {site.legalName}. All Rights Reserved.
         </p>
       </div>

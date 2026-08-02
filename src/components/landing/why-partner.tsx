@@ -24,14 +24,14 @@ export function WhyPartner() {
                   <Icon name={card.icon} className="size-7" strokeWidth={1.7} />
                 </span>
 
-                <h3 className="whitespace-pre-line font-display text-[0.94rem] font-bold uppercase leading-snug tracking-[0.05em] text-ink">
+                <h3 className="whitespace-pre-line font-display text-base font-bold uppercase leading-snug tracking-[0.05em] text-ink">
                   {card.title}
                 </h3>
 
                 {card.points.length > 0 ? (
                   <ul className="mt-5 space-y-2.5 text-left">
                     {card.points.map((point) => (
-                      <li key={point} className="flex gap-2.5 text-[0.8rem] leading-snug text-ink-soft">
+                      <li key={point} className="flex gap-2.5 text-[0.9rem] leading-snug text-ink-soft">
                         <span
                           aria-hidden="true"
                           className="mt-[0.42rem] size-1.5 shrink-0 rounded-full bg-brand-red"
@@ -41,7 +41,7 @@ export function WhyPartner() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-5 text-left text-[0.8rem] leading-relaxed text-ink-soft">
+                  <p className="mt-5 text-left text-[0.9rem] leading-relaxed text-ink-soft">
                     {card.body}
                   </p>
                 )}

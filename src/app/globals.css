@@ -148,6 +148,14 @@
     padding-inline: 1.25rem;
   }
 
+  /* One consistent numeral face for KPI and commercial figures. */
+  .kpi-number {
+    font-family: var(--font-sans);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.025em;
+  }
+
   @media (min-width: 768px) {
     .shell {
       padding-inline: 2rem;

@@ -25,10 +25,13 @@ import { createLeadSchema, type CreateLeadInput } from "@/lib/validation/lead";
 export function CreateLeadDialog({
   members,
   canAssign,
+  leadBasePath,
 }: {
   members: { id: string; full_name: string }[];
   /** Members create leads on their own name, so they see no picker. */
   canAssign: boolean;
+  /** Keeps the shared dialog inside the admin or member workspace. */
+  leadBasePath: "/admin/leads" | "/member/leads";
 }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
@@ -67,7 +70,7 @@ export function CreateLeadDialog({
       );
       reset();
       setOpen(false);
-      router.push(`/admin/leads/${result.data.leadId}`);
+      router.push(`${leadBasePath}/${result.data.leadId}`);
       return;
     }
 

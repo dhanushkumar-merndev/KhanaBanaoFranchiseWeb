@@ -18,7 +18,7 @@ function ChecklistItem({
   return (
     <li
       className={cn(
-        "flex items-center gap-3 text-[0.83rem] text-ink sm:text-sm",
+        "flex items-center gap-3 text-[0.9rem] text-ink sm:text-base",
         reversed && "md:flex-row-reverse",
       )}
     >
@@ -54,10 +54,10 @@ export function WhoDoesWhat() {
             <Leaf src="/decor/garlic.svg" className="left-1/2 top-3 w-8 translate-x-[80%] md:w-12" speed={0.11} rotate={-8} sway swayDelay={0.9} opacity={0.75} />
             <Leaf src="/decor/chilli.svg" className="left-1/2 top-1/2 w-7 -translate-x-[200%] -translate-y-1/2 md:w-10" speed={-0.07} rotate={30} sway swayDelay={0.4} opacity={0.65} desktopOnly />
 
-            <div className="relative grid gap-10 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:items-center md:gap-6">
+            <div className="relative mx-auto grid max-w-6xl gap-10 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:items-center md:gap-6">
               {/* You provide */}
               <div className="md:pl-16">
-                <p className="inline-flex rounded-md bg-gradient-to-r from-brand-gold to-brand-beige px-4 py-1.5 text-[0.68rem] font-bold uppercase tracking-[0.14em] text-white shadow-sm">
+                <p className="inline-flex rounded-md bg-gradient-to-r from-brand-gold to-brand-beige px-4 py-1.5 text-[0.8rem] font-bold uppercase tracking-[0.14em] text-white shadow-sm">
                   You Provide
                 </p>
                 <ul className="mt-6 space-y-3.5">
@@ -87,7 +87,7 @@ export function WhoDoesWhat() {
 
               {/* We provide */}
               <div className="md:pr-16 md:text-right">
-                <p className="inline-flex rounded-md bg-gradient-to-r from-brand-red to-brand-crimson px-4 py-1.5 text-[0.68rem] font-bold uppercase tracking-[0.14em] text-white shadow-sm">
+                <p className="inline-flex rounded-md bg-gradient-to-r from-brand-red to-brand-crimson px-4 py-1.5 text-[0.8rem] font-bold uppercase tracking-[0.14em] text-white shadow-sm">
                   {site.name} Provides
                 </p>
                 <ul className="mt-6 space-y-3.5 md:text-left">

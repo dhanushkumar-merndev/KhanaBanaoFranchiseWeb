@@ -20,7 +20,7 @@ export function EligibilityInvestment() {
               <h3 className="font-display text-lg font-bold uppercase tracking-[0.1em] text-ink">
                 Eligibility
               </h3>
-              <p className="mt-2 max-w-md text-[0.82rem] leading-relaxed text-ink-soft">
+              <p className="mt-2 max-w-md text-[0.92rem] leading-relaxed text-ink-soft">
                 We keep the bar practical. If these four things are true for you,
                 you are a fit — prior catering experience is not required.
               </p>
@@ -34,10 +34,10 @@ export function EligibilityInvestment() {
                       <Icon name={item.icon} className="size-5" />
                     </span>
                     <div>
-                      <h4 className="font-display text-[0.9rem] font-bold text-ink">
+                      <h4 className="font-display text-base font-bold text-ink">
                         {item.title}
                       </h4>
-                      <p className="mt-1.5 text-[0.76rem] leading-relaxed text-ink-soft">
+                      <p className="mt-1.5 text-[0.86rem] leading-relaxed text-ink-soft">
                         {item.body}
                       </p>
                     </div>
@@ -53,7 +53,7 @@ export function EligibilityInvestment() {
               <h3 className="font-display text-lg font-bold uppercase tracking-[0.1em] text-ink">
                 Investment Overview
               </h3>
-              <p className="mt-2 text-[0.82rem] leading-relaxed text-ink-soft">
+              <p className="mt-2 text-[0.92rem] leading-relaxed text-ink-soft">
                 Indicative ranges. Your actual setup cost depends on your city,
                 premises and the scale you launch at.
               </p>
@@ -64,20 +64,20 @@ export function EligibilityInvestment() {
                     key={row.label}
                     className="flex items-start justify-between gap-4 py-3.5"
                   >
-                    <dt className="text-[0.82rem] font-medium text-ink">
+                    <dt className="text-[0.92rem] font-medium text-ink">
                       {row.label}
-                      <span className="mt-0.5 block text-[0.7rem] font-normal text-ink-soft">
+                      <span className="mt-0.5 block text-[0.8rem] font-normal text-ink-soft">
                         {row.note}
                       </span>
                     </dt>
-                    <dd className="shrink-0 font-display text-[0.95rem] font-bold text-brand-crimson">
+                    <dd className="kpi-number shrink-0 text-[0.95rem] text-brand-crimson">
                       {row.value}
                     </dd>
                   </div>
                 ))}
               </dl>
 
-              <p className="mt-5 rounded-xl bg-surface px-4 py-3 text-[0.72rem] leading-relaxed text-ink-soft ring-1 ring-line">
+              <p className="mt-5 rounded-xl bg-surface px-4 py-3 text-[0.84rem] leading-relaxed text-ink-soft ring-1 ring-line">
                 No minimum-guarantee charges and no fee for marketing leads we
                 route to your territory.
               </p>
