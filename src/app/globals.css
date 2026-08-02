@@ -241,19 +241,22 @@
 /* ------------------------------------------------------------------
    Hero image frame
 
-   An arch on the left, a softly-rounded rectangle on the right. The radii
-   are percentages so the offset gold hairline and the dashed inner rule —
-   which sit on larger and smaller boxes — trace the same silhouette without
-   three sets of hand-tuned numbers.
+   A deep arch on the left, generously rounded corners on the right. The two
+   left vertical radii sum to 100%, which is what makes that edge a single
+   unbroken curve — anything less leaves a straight segment in the middle and
+   the shape reads as a rounded rectangle instead of a petal.
+
+   The radii are percentages so the offset dashed outline, sitting on a
+   larger box, traces the same silhouette without a second set of numbers.
 ------------------------------------------------------------------ */
 
 .hero-frame {
-  border-radius: 28% 1.5rem 1.5rem 28% / 34% 1.5rem 1.5rem 34%;
+  border-radius: 25% 2rem 2rem 25% / 50% 2rem 2rem 50%;
 }
 
 @media (min-width: 640px) {
   .hero-frame {
-    border-radius: 30% 2.5rem 2.5rem 30% / 36% 2.5rem 2.5rem 36%;
+    border-radius: 27% 3.5rem 3.5rem 27% / 50% 3.5rem 3.5rem 50%;
   }
 }
 

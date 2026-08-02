@@ -15,13 +15,13 @@ export function Hero() {
         className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(120%_90%_at_78%_18%,rgba(232,201,138,0.28),transparent_58%),radial-gradient(80%_70%_at_8%_84%,rgba(229,72,63,0.08),transparent_60%)]"
       />
 
-      {/* Decorative leaves — parallax on scroll */}
-      {/* Kept clear of the headline column on narrow screens. */}
+      {/* Decorative leaves — parallax on scroll.
+          Kept clear of the headline column on narrow screens, and off the
+          right entirely: the image frame carries its own sprig, and anything
+          floating beside it competes with the silhouette. */}
       <Leaf src="/decor/leaf-sprig.svg" className="-left-8 top-[26rem] w-14 md:left-[-4%] md:top-28 md:w-28" speed={0.14} rotate={-8} sway opacity={0.8} />
-      <Leaf src="/decor/leaf-single.svg" className="right-[4%] top-6 w-8 md:w-12" speed={-0.12} rotate={22} sway swayDelay={0.8} desktopOnly />
       <Leaf src="/decor/leaf-basil.svg" className="right-[44%] top-4 w-10 md:w-16" speed={0.18} rotate={-14} sway swayDelay={0.3} opacity={0.9} desktopOnly />
       <Leaf src="/decor/leaf-mint.svg" className="bottom-28 left-[6%] w-10 md:w-14" speed={-0.1} rotate={12} sway swayDelay={1.2} desktopOnly />
-      <Leaf src="/decor/chilli.svg" className="bottom-44 right-[1%] w-7 md:w-10" speed={0.16} rotate={-20} sway swayDelay={0.6} desktopOnly />
 
       <div className="shell grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.06fr)] lg:gap-8">
         {/* ---------------- Copy ---------------- */}
@@ -103,10 +103,10 @@ export function Hero() {
               className="hero-frame pointer-events-none absolute -inset-6 -z-10 bg-[radial-gradient(70%_70%_at_58%_45%,rgba(232,201,138,0.4),transparent_72%)]"
             />
 
-            {/* Gold hairline tracing the frame a few pixels out */}
+            {/* Dashed outline tracing the silhouette a few pixels out */}
             <div
               aria-hidden="true"
-              className="hero-frame pointer-events-none absolute -inset-2.5 border border-brand-gold/45 sm:-inset-4"
+              className="hero-frame pointer-events-none absolute -inset-3 border border-dashed border-brand-gold/60 sm:-inset-5"
             />
 
             <div className="hero-frame relative size-full overflow-hidden shadow-[0_40px_80px_-40px_rgba(110,40,20,0.55)] ring-1 ring-brand-gold/25">
@@ -122,21 +122,18 @@ export function Hero() {
                 aria-hidden="true"
                 className="absolute inset-0 bg-gradient-to-tr from-brand-maroon-dark/30 via-transparent to-transparent"
               />
-              {/* Dashed rule set in from the edge, like a mounted print */}
-              <div
-                aria-hidden="true"
-                className="hero-frame pointer-events-none absolute inset-3 border border-dashed border-white/30 sm:inset-5"
-              />
             </div>
 
-            {/* Decor riding the frame. Sits above the photo but below the seal. */}
+            {/* One sprig. It sits in the gap the arch opens at the top left,
+                where the shape curves away from its box — the frame carries
+                itself, so more decoration crowds the silhouette rather than
+                framing it.
+
+                Low speed on purpose: parallax plus sway can lift a leaf
+                40-odd pixels, enough to carry it off the open corner and
+                onto the photo. */}
             <div className="pointer-events-none absolute inset-0 z-10">
-              <Leaf src="/decor/floral-corner.svg" className="-right-5 -top-7 w-16 md:-right-8 md:-top-10 md:w-28" speed={-0.08} rotate={12} sway swayDelay={0.4} opacity={0.9} />
-              <Leaf src="/decor/leaf-sprig.svg" className="-bottom-7 left-1 w-14 md:-bottom-9 md:left-4 md:w-24" speed={0.12} rotate={-18} flip sway swayDelay={1} opacity={0.85} />
-              {/* Kept below 55% — higher up the arch it lands on the tail of
-                  the headline, which reaches this column at 1440px. */}
-              <Leaf src="/decor/cashews.svg" className="bottom-[22%] left-[-4%] w-10 md:w-16" speed={0.1} rotate={-10} sway swayDelay={0.7} opacity={0.9} desktopOnly />
-              <Leaf src="/decor/garlic.svg" className="bottom-[16%] right-[-4%] w-8 md:w-12" speed={-0.14} rotate={16} sway swayDelay={1.4} opacity={0.85} desktopOnly />
+              <Leaf src="/decor/leaf-sprig.svg" className="-top-5 left-[7%] w-14 md:-top-7 md:left-[9%] md:w-20" speed={-0.05} rotate={-14} sway swayDelay={0.4} opacity={0.9} />
             </div>
 
             {/* "Stronger Together" seal */}
