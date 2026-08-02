@@ -2,14 +2,30 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { Menu, Phone, X } from "lucide-react";
 import { images, nav, site } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 export function Header() {
+  const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
-  const [active, setActive] = useState<string>("#home");
+
+  // The nav is a set of in-page anchors. They only resolve on the landing
+  // page — from /privacy or /terms they have to route home first, and no
+  // section can be "current" because none of them are on the page.
+  const onLanding = pathname === "/";
+  const linkTo = (hash: string) => (onLanding ? hash : `/${hash}`);
+
+  const [active, setActive] = useState<string>(onLanding ? "#home" : "");
+  const [lastPathname, setLastPathname] = useState(pathname);
+
+  if (pathname !== lastPathname) {
+    setLastPathname(pathname);
+    setActive(pathname === "/" ? "#home" : "");
+    setOpen(false);
+  }
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -57,7 +73,7 @@ export function Header() {
       )}
     >
       <div className="shell flex h-16 items-center justify-between gap-4 md:h-20">
-        <a href="#home" className="relative z-10 flex shrink-0 items-center" aria-label={`${site.name} home`}>
+        <a href={onLanding ? "#home" : "/"} className="relative z-10 flex shrink-0 items-center" aria-label={`${site.name} home`}>
           <Image
             src={images.logo}
             alt={`${site.name} — ${site.tagline}`}
@@ -74,7 +90,7 @@ export function Header() {
             return (
               <a
                 key={item.href}
-                href={item.href}
+                href={linkTo(item.href)}
                 aria-current={isActive ? "true" : undefined}
                 className={cn(
                   "relative rounded-full px-3 py-2 text-[0.83rem] font-medium transition-colors",
@@ -127,7 +143,7 @@ export function Header() {
           {nav.map((item) => (
             <a
               key={item.href}
-              href={item.href}
+              href={linkTo(item.href)}
               onClick={() => setOpen(false)}
               className={cn(
                 "rounded-xl px-3 py-3.5 text-sm font-medium transition-colors",

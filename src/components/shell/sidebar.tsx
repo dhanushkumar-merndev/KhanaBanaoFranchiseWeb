@@ -58,7 +58,10 @@ export function Sidebar({ role }: { role: Role }) {
   }
 
   const nav = (
-    <nav className="flex flex-1 flex-col gap-6 overflow-y-auto px-3 py-5" aria-label="Dashboard">
+    <nav
+      className="scrollbar-pill flex flex-1 flex-col gap-6 overflow-y-auto px-3 py-5"
+      aria-label="Dashboard"
+    >
       {groups.map((group) => (
         <div key={group.title}>
           <p className="px-3 pb-2 text-[0.62rem] font-bold uppercase tracking-[0.14em] text-ink-soft/70">

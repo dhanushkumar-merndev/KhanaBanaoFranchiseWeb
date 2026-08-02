@@ -208,6 +208,56 @@
     display: none;
   }
 
+  /* Red pill scrollbar — dashboard sidebar.
+
+     Firefox implements only the two standard properties, so that is all it
+     gets: a thin crimson thumb, no pill. */
+  .scrollbar-pill {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-brand-crimson) transparent;
+  }
+
+  /* Chromium and WebKit implement BOTH the standard properties and the legacy
+     pseudo-elements, and the standard ones win outright: leaving
+     `scrollbar-width: thin` set here silently suppresses every rule below and
+     the pill never renders. Measured in Chrome — a 20px ::-webkit-scrollbar
+     alongside `thin` yields a 10px plain bar; reset to auto and the 20px
+     styled bar comes back. Firefox does not recognise the selector, so it
+     never enters this block and keeps the rule above. */
+  @supports selector(::-webkit-scrollbar) {
+    .scrollbar-pill {
+      scrollbar-width: auto;
+      scrollbar-color: auto;
+    }
+
+    .scrollbar-pill::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+
+    .scrollbar-pill::-webkit-scrollbar-track,
+    .scrollbar-pill::-webkit-scrollbar-corner {
+      background: transparent;
+    }
+
+    /* ::-webkit-scrollbar-thumb ignores margin and padding, so a transparent
+       border plus background-clip is the only way to inset the pill. */
+    .scrollbar-pill::-webkit-scrollbar-thumb {
+      background-color: color-mix(
+        in srgb,
+        var(--color-brand-crimson) 70%,
+        transparent
+      );
+      border: 2px solid transparent;
+      background-clip: content-box;
+      border-radius: 9999px;
+    }
+
+    .scrollbar-pill::-webkit-scrollbar-thumb:hover {
+      background-color: var(--color-brand-crimson);
+    }
+  }
+
   .text-balance {
     text-wrap: balance;
   }

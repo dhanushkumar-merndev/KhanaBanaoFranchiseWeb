@@ -26,14 +26,6 @@ export default async function LoginPage({
   return (
     <main className="flex flex-1 items-center justify-center bg-canvas px-5 py-16">
       <div className="w-full max-w-md">
-        <Link
-          href="/"
-          className="mb-8 inline-flex items-center gap-2 text-[0.78rem] font-medium text-ink-soft transition hover:text-brand-crimson"
-        >
-          <ArrowLeft className="size-4" />
-          Back to the website
-        </Link>
-
         <div className="rounded-2xl border border-line bg-surface p-8 shadow-[0_24px_60px_-40px_rgba(110,40,20,0.5)]">
           <Image
             src={images.logo}
@@ -66,7 +58,7 @@ export default async function LoginPage({
           </div>
 
           <p className="mt-6 text-center text-[0.72rem] leading-relaxed text-ink-soft">
-            Trouble signing in? Contact your administrator or call{" "}
+            Trouble signing in? <br></br>Contact your administrator or call{" "}
             <a
               href={site.phoneHref}
               className="font-semibold text-brand-crimson underline underline-offset-2"
@@ -75,6 +67,14 @@ export default async function LoginPage({
             </a>
             .
           </p>
+
+          <Link
+            href="/"
+            className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-brand-crimson px-5 py-3 text-[0.78rem] font-semibold text-white shadow-[0_10px_24px_-12px_rgba(193,39,45,0.9)] transition hover:bg-brand-maroon"
+          >
+            <ArrowLeft className="size-4" strokeWidth={2.2} />
+            Back to the website
+          </Link>
         </div>
       </div>
     </main>
