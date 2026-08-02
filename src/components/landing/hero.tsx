@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { ArrowRight, Crown, Play } from "lucide-react";
 import { Leaf } from "@/components/decor/leaf";
+import { HeroHeading } from "@/components/landing/hero-heading";
 import { Reveal } from "@/components/motion/reveal";
 import { Icon } from "@/components/landing/icons";
 import { heroBadges, images, site } from "@/lib/site";
@@ -31,13 +32,7 @@ export function Hero() {
             </p>
           </Reveal>
 
-          <Reveal delay={90}>
-            <h1 className="mt-4 font-display text-[2.6rem] leading-[1.06] font-bold tracking-tight text-ink sm:text-6xl lg:text-[4.15rem]">
-              Become a
-              <span className="mt-1 block text-brand-crimson">Khana Banao</span>
-              Franchise Partner
-            </h1>
-          </Reveal>
+          <HeroHeading />
 
           <Reveal delay={160}>
             <span aria-hidden="true" className="mt-6 flex items-center gap-2">

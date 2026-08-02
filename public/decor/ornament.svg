@@ -1,6 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 24" fill="none">
-  <path d="M0 12h74M146 12h74" stroke="#c8a24d" stroke-width="1.2" opacity=".6"/>
-  <path d="M82 12l8-6 8 6-8 6z" fill="#c8a24d" opacity=".8"/>
-  <path d="M110 3l9 9-9 9-9-9z" fill="#c1272d"/>
-  <path d="M138 12l-8-6-8 6 8 6z" fill="#c8a24d" opacity=".8"/>
+  <defs>
+    <linearGradient id="kb-decor-ornament-line" x1="0" y1="12" x2="220" y2="12" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#C9A24D" stop-opacity="0"/>
+      <stop offset="25%" stop-color="#C9A24D" stop-opacity="0.9"/>
+      <stop offset="50%" stop-color="#FFF0C7" stop-opacity="1"/>
+      <stop offset="75%" stop-color="#C9A24D" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#C9A24D" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="kb-decor-ornament-gold" x1="83" y1="5" x2="137" y2="19" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFF0C7"/>
+      <stop offset="50%" stop-color="#C9A24D"/>
+      <stop offset="100%" stop-color="#8E6A26"/>
+    </linearGradient>
+  </defs>
+  <!-- Horizontal Gold Divider Line -->
+  <path d="M0 12h76M144 12h76" stroke="url(#kb-decor-ornament-line)" stroke-width="1.8"/>
+
+  <!-- Left & Right Gold Diamonds -->
+  <path d="m83 12 9-7 8 7-8 7-9-7Z" fill="url(#kb-decor-ornament-gold)"/>
+  <path d="m120 12 8-7 9 7-9 7-8-7Z" fill="url(#kb-decor-ornament-gold)"/>
+
+  <!-- Central Diamond Medallion -->
+  <path d="m110 1 11 11-11 11-11-11 11-11Z" fill="#C1272D"/>
+  <path d="m110 5 7 7-7 7-7-7 7-7Z" fill="url(#kb-decor-ornament-gold)"/>
+  <path d="m110 8 4 4-4 4-4-4 4-4Z" fill="#FFF0C7"/>
+
+  <!-- Side Accent Beads -->
+  <circle cx="71" cy="12" r="2.5" fill="#C9A24D"/>
+  <circle cx="149" cy="12" r="2.5" fill="#C9A24D"/>
 </svg>

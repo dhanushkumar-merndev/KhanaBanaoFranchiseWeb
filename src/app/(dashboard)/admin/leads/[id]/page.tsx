@@ -2,46 +2,25 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { TabNav } from "@/components/shell/tab-nav";
 import { Topbar } from "@/components/shell/topbar";
-import { ActivityTab } from "@/components/leads/activity-tab";
-import { FollowupsTab } from "@/components/leads/followups-tab";
 import { LeadHeader } from "@/components/leads/lead-header";
-import { OverviewTab } from "@/components/leads/overview-tab";
-import { EmptyState } from "@/components/ui/feedback";
+import {
+  LEAD_TABS,
+  LEAD_TAB_LABELS,
+  LeadTabPanel,
+  leadTabBadges,
+  parseLeadTab,
+} from "@/components/leads/lead-tabs";
+import {
+  checkActivationReadiness,
+  checkApprovalReadiness,
+} from "@/app/actions/franchises";
 import { requireAdmin } from "@/lib/auth/session";
 import { getLeadDetail } from "@/lib/data/lead-detail";
+import { getLeadPipeline } from "@/lib/data/pipeline";
 import { listActiveMembers } from "@/lib/data/leads";
 import { LeadActions } from "./lead-actions";
 
 export const metadata: Metadata = { title: "Lead · Khana Banao" };
-
-const TABS = [
-  "overview",
-  "activity",
-  "followups",
-  "application",
-  "documents",
-  "agreement",
-  "payment",
-  "activation",
-  "training",
-  "setup",
-  "emails",
-] as const;
-type Tab = (typeof TABS)[number];
-
-const TAB_LABELS: Record<Tab, string> = {
-  overview: "Overview",
-  activity: "Activity",
-  followups: "Follow-ups",
-  application: "Application",
-  documents: "Documents",
-  agreement: "Agreement",
-  payment: "Payment",
-  activation: "Activation",
-  training: "Training",
-  setup: "Setup",
-  emails: "Emails",
-};
 
 export default async function AdminLeadDetailPage({
   params,
@@ -59,24 +38,20 @@ export default async function AdminLeadDetailPage({
   const lead = await getLeadDetail(id, null);
   if (!lead) notFound();
 
-  const members = await listActiveMembers();
+  const [pipeline, approval, activation, members] = await Promise.all([
+    getLeadPipeline(lead.id),
+    checkApprovalReadiness(lead.id),
+    checkActivationReadiness(lead.id),
+    listActiveMembers(),
+  ]);
 
-  const tabParam = Array.isArray(raw.tab) ? raw.tab[0] : raw.tab;
-  const tab: Tab = TABS.includes(tabParam as Tab) ? (tabParam as Tab) : "overview";
+  const tab = parseLeadTab(raw.tab);
+  const badges = leadTabBadges(lead, pipeline);
 
-  const pendingFollowups = lead.followups.filter(
-    (followup) => followup.status === "PENDING",
-  ).length;
-
-  const tabItems = TABS.map((key) => ({
+  const tabItems = LEAD_TABS.map((key) => ({
     href: `/admin/leads/${lead.id}?tab=${key}`,
-    label: TAB_LABELS[key],
-    badge:
-      key === "activity"
-        ? lead.activities.length
-        : key === "followups"
-          ? pendingFollowups
-          : undefined,
+    label: LEAD_TAB_LABELS[key],
+    badge: badges[key as keyof typeof badges],
   }));
 
   return (
@@ -110,32 +85,17 @@ export default async function AdminLeadDetailPage({
         />
 
         <div className="pt-5">
-          {tab === "overview" && <OverviewTab lead={lead} />}
-          {tab === "activity" && <ActivityTab activities={lead.activities} />}
-          {tab === "followups" && (
-            <FollowupsTab
-              followups={lead.followups}
-              canManage={lead.current_status !== "REJECTED"}
-            />
-          )}
-          {tab !== "overview" && tab !== "activity" && tab !== "followups" && (
-            <StagePlaceholder tab={tab} />
-          )}
+          <LeadTabPanel
+            tab={tab}
+            lead={lead}
+            pipeline={pipeline}
+            approval={approval}
+            activation={activation}
+            members={members.map((m) => ({ id: m.id, full_name: m.full_name }))}
+            isAdmin
+          />
         </div>
       </main>
     </>
-  );
-}
-
-/**
- * Tabs whose feature has not been built yet. Deliberately explicit rather than
- * an empty panel, so nobody mistakes an unbuilt stage for a stage with no data.
- */
-function StagePlaceholder({ tab }: { tab: Tab }) {
-  return (
-    <EmptyState
-      title={`${TAB_LABELS[tab]} is not wired up yet`}
-      body="This stage of the pipeline is still being built. Overview, Activity and Follow-ups are live."
-    />
   );
 }

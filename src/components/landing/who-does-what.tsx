@@ -73,7 +73,7 @@ export function WhoDoesWhat() {
               </div>
 
               {/* We provide */}
-              <div className="md:text-left">
+              <div className="md:flex md:flex-col md:items-end">
                 <p className="inline-flex rounded-md bg-gradient-to-r from-brand-red to-brand-crimson px-4 py-1.5 text-[0.68rem] font-bold uppercase tracking-[0.14em] text-white shadow-sm">
                   {site.name} Provides
                 </p>

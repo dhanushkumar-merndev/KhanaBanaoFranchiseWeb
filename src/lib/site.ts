@@ -1,7 +1,7 @@
 /**
  * Single source of truth for public-site copy, contact details and image slots.
- * Swap the files under /public/images with real photography (same file names,
- * or point these paths somewhere else) and the layout stays intact.
+ * Public-site photography is stored as optimized WebP assets under
+ * /public/images so the landing page remains fast at every breakpoint.
  */
 
 export const site = {
@@ -25,8 +25,8 @@ export const site = {
 export const nav = [
   { label: "Home", href: "#home" },
   { label: "Why Partner", href: "#why-partner" },
-  { label: "What We Provide", href: "#what-we-provide" },
   { label: "How It Works", href: "#how-it-works" },
+  { label: "What We Provide", href: "#what-we-provide" },
   { label: "FAQ", href: "#faq" },
   { label: "Contact", href: "#contact" },
 ] as const;
@@ -40,13 +40,13 @@ export const images = {
   logo: "/logo-mark.png",
   logoWidth: 2520,
   logoHeight: 854,
-  heroFeast: "/images/hero-feast.svg",
+  heroFeast: "/images/hero-feast.webp",
   flavours: [
-    { src: "/images/flavour-1.svg", alt: "Live catering counter at an event" },
-    { src: "/images/flavour-2.svg", alt: "Buffet spread laid out for guests" },
-    { src: "/images/flavour-3.svg", alt: "Wedding table setting" },
-    { src: "/images/flavour-4.svg", alt: "Signature curry served in a handi" },
-    { src: "/images/flavour-5.svg", alt: "Traditional Indian sweets platter" },
+    { src: "/images/flavour-1.webp", alt: "Chef serving guests at a live Indian catering counter" },
+    { src: "/images/flavour-2.webp", alt: "Copper handis filled with an Indian buffet spread" },
+    { src: "/images/flavour-3.webp", alt: "Elegant wedding table with gold place settings and crimson flowers" },
+    { src: "/images/flavour-4.webp", alt: "Signature Indian curry served steaming in a copper handi" },
+    { src: "/images/flavour-5.webp", alt: "Traditional Indian sweets arranged on a brass celebration platter" },
   ],
 } as const;
 

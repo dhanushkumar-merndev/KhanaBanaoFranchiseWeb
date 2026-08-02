@@ -1,13 +1,34 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90 110" fill="none">
   <defs>
-    <linearGradient id="ch1" x1="24" y1="24" x2="70" y2="100" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#E8564A"/>
-      <stop offset=".55" stop-color="#CF2A26"/>
-      <stop offset="1" stop-color="#96110F"/>
+    <linearGradient id="kb-decor-chilli-body" x1="18" y1="15" x2="75" y2="102" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FF6B59"/>
+      <stop offset="35%" stop-color="#E52D2E"/>
+      <stop offset="70%" stop-color="#B8141F"/>
+      <stop offset="100%" stop-color="#7A0810"/>
     </linearGradient>
+    <linearGradient id="kb-decor-chilli-stem" x1="36" y1="5" x2="62" y2="30" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#5B9A44"/>
+      <stop offset="60%" stop-color="#346824"/>
+      <stop offset="100%" stop-color="#1E4213"/>
+    </linearGradient>
+    <filter id="kb-decor-chilli-shadow" x="-25%" y="-15%" width="160%" height="145%">
+      <feDropShadow dx="2" dy="5" stdDeviation="3.5" flood-color="#520A10" flood-opacity="0.3"/>
+    </filter>
   </defs>
-  <path d="M46 22c16 2 28 16 30 34 3 24-10 46-28 52-6 2-12-1-13-7-2-14 4-26 8-38 4-11 5-25 3-41Z" fill="url(#ch1)"/>
-  <path d="M52 36c6 8 9 20 8 32-1 13-6 25-13 33" stroke="#7E0D0C" stroke-width="1.6" stroke-linecap="round" opacity=".45"/>
-  <path d="M46 22c-6-6-14-9-22-8 3 6 9 11 16 13-8 1-15 5-19 12 8 1 16-2 22-8 2 5 5 8 9 10-1-7-3-13-6-19Z" fill="#3F7C33"/>
-  <path d="M46 22c1-6 5-11 10-14" stroke="#3F7C33" stroke-width="3.4" stroke-linecap="round"/>
+  <g filter="url(#kb-decor-chilli-shadow)">
+    <!-- Main Chilli Body -->
+    <path d="M37 22c12 0 25 7 29 18 8 23-9 48-44 63 13-15 14-27 8-41-8-18-4-34 7-40Z" fill="url(#kb-decor-chilli-body)"/>
+
+    <!-- High-Gloss Specular Reflection -->
+    <path d="M41 28c8 1 15 6 18 13 4 11-1 24-10 34" stroke="#FFAEA1" stroke-width="3" stroke-linecap="round" opacity="0.75"/>
+    <path d="M43 32c5 1 10 5 12 10" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" opacity="0.8"/>
+
+    <!-- Green Stem / Calyx Base -->
+    <path d="M37 23c-1-9 2-16 11-20 1 8 7 12 15 13-5 7-14 9-26 7Z" fill="url(#kb-decor-chilli-stem)"/>
+    <!-- Stem Top Hook -->
+    <path d="M43 18c2-5 5-9 9-12" stroke="#78B35D" stroke-width="3.2" stroke-linecap="round"/>
+
+    <!-- Calyx Highlights & Vein Details -->
+    <path d="M40 20c3 2 7 3 11 1" stroke="#A1D886" stroke-width="1.2" opacity="0.7"/>
+  </g>
 </svg>

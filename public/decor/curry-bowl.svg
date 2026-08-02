@@ -1,27 +1,55 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150" fill="none">
   <defs>
-    <linearGradient id="cb1" x1="24" y1="70" x2="176" y2="140" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#F3EBDF"/>
-      <stop offset="1" stop-color="#D6C6AE"/>
+    <linearGradient id="kb-decor-curry-copper" x1="25" y1="65" x2="175" y2="145" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F7D09A"/>
+      <stop offset="25%" stop-color="#E28E43"/>
+      <stop offset="60%" stop-color="#B84F26"/>
+      <stop offset="85%" stop-color="#802B16"/>
+      <stop offset="100%" stop-color="#541708"/>
     </linearGradient>
-    <linearGradient id="cb2" x1="40" y1="60" x2="160" y2="96" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#E8823C"/>
-      <stop offset=".5" stop-color="#C9531F"/>
-      <stop offset="1" stop-color="#9E3A16"/>
-    </linearGradient>
+    <radialGradient id="kb-decor-curry-gravy" cx="0" cy="0" r="1" gradientTransform="translate(99 75) scale(72 26)" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FF9D3B"/>
+      <stop offset="45%" stop-color="#DE4A1D"/>
+      <stop offset="85%" stop-color="#9C1E15"/>
+      <stop offset="100%" stop-color="#6E0F09"/>
+    </radialGradient>
+    <filter id="kb-decor-curry-shadow" x="-15%" y="-30%" width="135%" height="165%">
+      <feDropShadow dx="1" dy="6" stdDeviation="4.5" flood-color="#4F160E" flood-opacity="0.3"/>
+    </filter>
   </defs>
-  <ellipse cx="100" cy="70" rx="78" ry="18" fill="#C9B79A"/>
-  <path d="M22 70c0 34 35 62 78 62s78-28 78-62Z" fill="url(#cb1)"/>
-  <ellipse cx="100" cy="70" rx="70" ry="15" fill="url(#cb2)"/>
-  <g fill="#F6D9A8" opacity=".85">
-    <ellipse cx="76" cy="66" rx="9" ry="5"/>
-    <ellipse cx="112" cy="72" rx="11" ry="6"/>
-    <ellipse cx="136" cy="64" rx="7" ry="4"/>
+  <g filter="url(#kb-decor-curry-shadow)">
+    <!-- Steam Whimsical Rising Curves -->
+    <path d="M55 50c-8-10 6-15 2-26M91 47c-9-12 7-18 2-31M128 50c-8-10 6-16 2-27" stroke="#C9A24D" stroke-width="2.5" stroke-linecap="round" opacity="0.65"/>
+
+    <!-- Copper Kadai Outer Body -->
+    <path d="M22 78c0-17 34-30 77-30s78 13 78 30v39c0 15-35 27-78 27s-77-12-77-27V78Z" fill="url(#kb-decor-curry-copper)"/>
+
+    <!-- Inner Dark Bowl & Rich Gravy Pool -->
+    <ellipse cx="99" cy="78" rx="78" ry="31" fill="#6B2816"/>
+    <ellipse cx="99" cy="75" rx="70" ry="25" fill="url(#kb-decor-curry-gravy)"/>
+
+    <!-- Kadai Rim Metallic Highlight -->
+    <ellipse cx="99" cy="75" rx="77" ry="30" stroke="#FCE7C5" stroke-width="2" fill="none" opacity="0.75"/>
+    <path d="M33 81c15 16 43 21 66 21 27 0 51-7 67-20" stroke="#FFE1B3" stroke-width="2.2" opacity="0.6"/>
+
+    <!-- Hand-Hammered Texture Rings -->
+    <path d="M31 111c31 14 104 14 136 0M39 127c28 11 91 11 120 0" stroke="#5E2012" stroke-width="1.8" opacity="0.65"/>
+
+    <!-- Brass Loop Handles -->
+    <path d="M20 88H8c-8 0-8 14 2 16h14M177 88h12c8 0 8 14-2 16h-14" stroke="#B85E2E" stroke-width="5" stroke-linecap="round"/>
+    <path d="M20 88H8c-8 0-8 14 2 16h14M177 88h12c8 0 8 14-2 16h-14" stroke="#F1D69A" stroke-width="1.8" stroke-linecap="round" opacity="0.75"/>
+
+    <!-- Fresh Malai / Cream Swirl -->
+    <path d="M72 72c8-7 17-8 27-2 8 5 14 4 23-2" stroke="#FFF5DC" stroke-width="3.5" stroke-linecap="round"/>
+    <path d="M91 62c6 3 10 6 12 11M113 72c5-5 10-8 16-9" stroke="#FFF5DC" stroke-width="2.2" stroke-linecap="round"/>
+
+    <!-- Fresh Coriander Leaf Garnish -->
+    <g fill="#438C49">
+      <ellipse cx="83" cy="66" rx="6.5" ry="3.5" transform="rotate(-24 83 66)"/>
+      <ellipse cx="128" cy="76" rx="6.5" ry="3.5" transform="rotate(18 128 76)"/>
+      <ellipse cx="103" cy="83" rx="5.5" ry="3" transform="rotate(-8 103 83)"/>
+      <circle cx="83" cy="66" r="1.5" fill="#8FC77A"/>
+      <circle cx="128" cy="76" r="1.5" fill="#8FC77A"/>
+    </g>
   </g>
-  <g fill="#3F7C33">
-    <ellipse cx="96" cy="62" rx="7" ry="4" transform="rotate(-18 96 62)"/>
-    <ellipse cx="124" cy="78" rx="6" ry="3.5" transform="rotate(14 124 78)"/>
-  </g>
-  <path d="M22 70c0 6 1 11 3 16 20 9 46 14 75 14s55-5 75-14c2-5 3-10 3-16" fill="#000" opacity=".05"/>
-  <path d="M78 34c-5-7-5-14 0-20M100 28c-6-8-6-16 0-24M122 34c5-7 5-14 0-20" stroke="#C9B79A" stroke-width="3" stroke-linecap="round" opacity=".55"/>
 </svg>

@@ -7,6 +7,12 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
+      // `server-only` exists purely to make Next fail the build if a module
+      // leaks into the client. Under Vitest there is no such boundary, so it
+      // is stubbed out rather than left to throw on import.
+      "server-only": fileURLToPath(
+        new URL("./tests/stubs/server-only.ts", import.meta.url),
+      ),
     },
   },
   test: {

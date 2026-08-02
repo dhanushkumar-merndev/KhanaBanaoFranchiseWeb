@@ -120,7 +120,7 @@ export function Leaf({
   speed = 0.1,
   rotate = 0,
   flip = false,
-  sway = false,
+  sway = true,
   swayDelay = 0,
   opacity = 1,
   desktopOnly = false,
@@ -143,16 +143,13 @@ export function Leaf({
       aria-hidden="true"
       className={cn(
         "leaf",
-        sway && "leaf-sway",
         desktopOnly && "hidden md:block",
         className,
       )}
       style={
         {
           "--leaf-rot": `${rotate}deg`,
-          "--leaf-delay": `${swayDelay}s`,
           opacity,
-          transform: flip ? undefined : undefined,
         } as React.CSSProperties
       }
     >
@@ -163,7 +160,16 @@ export function Leaf({
         loading="lazy"
         decoding="async"
         draggable={false}
-        style={flip ? { transform: "scaleX(-1)" } : undefined}
+        className={cn(
+          "leaf-inner",
+          sway && "leaf-sway"
+        )}
+        style={
+          {
+            "--leaf-delay": `${swayDelay}s`,
+            transform: flip ? "scaleX(-1)" : undefined,
+          } as React.CSSProperties
+        }
       />
     </span>
   );

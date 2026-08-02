@@ -1,11 +1,42 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 90" fill="none">
-  <g fill="#c1272d">
-    <path d="M4 34l20-12 20 12v10L28 56 4 44z" opacity=".9"/>
-    <path d="M116 34L96 22 76 34v10l16 12 24-12z" opacity=".9"/>
-    <path d="M44 34l10-6h12l10 6v8l-10 8H54l-10-8z"/>
-    <path d="M30 44c6-2 12 0 16 5l10 10c3 3 3 8 0 11s-8 3-11 0l-8-8"/>
-    <path d="M90 44c-6-2-12 0-16 5L64 59c-3 3-3 8 0 11s8 3 11 0l8-8"/>
-    <rect x="42" y="52" width="30" height="9" rx="4.5" transform="rotate(8 42 52)"/>
-    <rect x="48" y="62" width="24" height="8" rx="4" transform="rotate(8 48 62)"/>
+  <defs>
+    <linearGradient id="kb-decor-hs-red" x1="8" y1="18" x2="104" y2="75" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FF5252"/>
+      <stop offset="45%" stop-color="#C1272D"/>
+      <stop offset="85%" stop-color="#8E1218"/>
+      <stop offset="100%" stop-color="#5B080B"/>
+    </linearGradient>
+    <linearGradient id="kb-decor-hs-skin" x1="30" y1="30" x2="80" y2="65" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFE5CC"/>
+      <stop offset="50%" stop-color="#F5C096"/>
+      <stop offset="100%" stop-color="#C98B5F"/>
+    </linearGradient>
+    <filter id="kb-decor-hs-shadow" x="-15%" y="-20%" width="135%" height="150%">
+      <feDropShadow dx="0" dy="4" stdDeviation="3" flood-color="#4F0A0D" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  <g filter="url(#kb-decor-hs-shadow)">
+    <!-- Brand Crimson Sleeves -->
+    <path d="m5 31 22-13 21 15-14 21L5 44V31ZM115 31 93 18 72 33l14 21 29-10V31Z" fill="url(#kb-decor-hs-red)"/>
+
+    <!-- Gold Sleeve Cuff Edging -->
+    <path d="M26 19l2 3M24 43l3-2M94 19l-2 3M96 43l-3-2" stroke="#F1D69A" stroke-width="2.5" stroke-linecap="round"/>
+
+    <!-- Interlocking Hands Base -->
+    <path d="m36 34 12-7c5-3 9-2 14 1l8 5 16 16-9 13-18 11c-4 3-10 2-13-1L30 56l6-22Z" fill="url(#kb-decor-hs-skin)"/>
+
+    <!-- Clasped Finger Lines & Shading -->
+    <path d="m47 49 18 16M54 43l20 17M62 38l18 16" stroke="#9E5938" stroke-width="2.5" stroke-linecap="round"/>
+
+    <!-- Thumb Wrap & Palm Highlights -->
+    <path d="M34 54 47 41c3-3 7-4 11-2l7 4c3 2 2 7-2 8l-8-2-8 8" fill="#FFE5CC"/>
+    <path d="m30 55 16 17c3 3 9 4 13 1l20-13M47 57l8-8 8 2c4-1 5-6 2-8l-7-4c-4-2-8-1-11 2L34 54" stroke="#7A3E26" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- Sleeve Highlight Sheen Lines -->
+    <path d="m22 28 15 10M98 28 83 38" stroke="#FFC1B6" stroke-width="2" stroke-linecap="round" opacity="0.75"/>
+
+    <!-- Top Golden Sparkle Star Motif -->
+    <circle cx="60" cy="13" r="3.5" fill="#C9A24D"/>
+    <path d="M60 4v4M48 9l3 3M72 9l-3 3" stroke="#F1D69A" stroke-width="2.2" stroke-linecap="round"/>
   </g>
 </svg>

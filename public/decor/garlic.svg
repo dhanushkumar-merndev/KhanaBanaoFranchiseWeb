@@ -1,13 +1,34 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 110" fill="none">
   <defs>
-    <linearGradient id="gl1" x1="30" y1="20" x2="80" y2="100" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFFDF8"/>
-      <stop offset=".6" stop-color="#F0E6D6"/>
-      <stop offset="1" stop-color="#D9C7AE"/>
+    <radialGradient id="kb-decor-garlic-bulb" cx="0" cy="0" r="1" gradientTransform="translate(45 46) rotate(55) scale(62 56)" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="40%" stop-color="#FFFDF5"/>
+      <stop offset="75%" stop-color="#EFE1CB"/>
+      <stop offset="100%" stop-color="#C7B298"/>
+    </radialGradient>
+    <linearGradient id="kb-decor-garlic-sprout" x1="52" y1="4" x2="55" y2="32" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#8DBF4E"/>
+      <stop offset="70%" stop-color="#558C36"/>
+      <stop offset="100%" stop-color="#345B21"/>
     </linearGradient>
+    <filter id="kb-decor-garlic-shadow" x="-15%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="1" dy="4" stdDeviation="3.5" flood-color="#4F361E" flood-opacity="0.22"/>
+    </filter>
   </defs>
-  <path d="M55 18c-4-8-8-12-12-14 6-1 11 1 14 5 3-4 8-6 14-5-4 2-8 6-12 14Z" fill="#B9A98C"/>
-  <path d="M55 22c18 0 34 16 34 38 0 24-15 40-34 40S21 84 21 60c0-22 16-38 34-38Z" fill="url(#gl1)"/>
-  <path d="M55 22c-8 6-13 22-13 38 0 18 5 33 13 40M55 22c8 6 13 22 13 38 0 18-5 33-13 40" stroke="#CDBB9B" stroke-width="1.8" opacity=".8"/>
-  <path d="M30 42c-4 6-6 13-6 20 0 15 6 27 15 34M80 42c4 6 6 13 6 20 0 15-6 27-15 34" stroke="#CDBB9B" stroke-width="1.4" opacity=".55"/>
+  <g filter="url(#kb-decor-garlic-shadow)">
+    <!-- Top Green Sprout Shoot -->
+    <path d="M52 31c-4-8-4-17 1-27 6 9 7 18 3 27h-4Z" fill="url(#kb-decor-garlic-sprout)"/>
+    <path d="M55 30c5-8 12-13 21-15-3 10-9 16-18 19l-3-4Z" fill="#A8A569"/>
+    <path d="M52 28c-7-6-14-8-23-7 6 8 13 12 23 12v-5Z" fill="#888A4C"/>
+
+    <!-- Main Garlic Bulb Silhouette -->
+    <path d="M54 28c13 9 12 18 25 27 11 8 17 18 14 30-4 17-22 21-39 20-18 1-36-3-39-20-3-12 3-22 14-30 13-9 12-18 25-27Z" fill="url(#kb-decor-garlic-bulb)"/>
+
+    <!-- Clove Ridge Shadows & Highlights -->
+    <path d="M54 34c-8 14-10 33-7 67M54 34c8 14 10 33 7 67M35 50c-8 17-8 33 2 48M73 50c8 17 8 33-2 48" stroke="#C9B394" stroke-width="1.8" stroke-linecap="round" opacity="0.8"/>
+    <path d="M48 42c-5 12-6 26-4 48M60 42c5 12 6 26 4 48" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" opacity="0.75"/>
+
+    <!-- Bottom Root Strands -->
+    <path d="M37 104c10-5 24-5 34 0M44 104l-5 4M52 105l-2 4M60 105l2 4M68 104l5 4" stroke="#8E6A44" stroke-width="1.8" stroke-linecap="round"/>
+  </g>
 </svg>

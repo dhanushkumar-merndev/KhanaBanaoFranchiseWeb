@@ -204,31 +204,35 @@
   /* Parallax offset written by the scroll controller. */
   --leaf-y: 0px;
   --leaf-rot: 0deg;
-  transform: translate3d(0, var(--leaf-y), 0) rotate(var(--leaf-rot));
+  transform: translate3d(0, var(--leaf-y, 0px), 0) rotate(var(--leaf-rot, 0deg));
   will-change: transform;
   backface-visibility: hidden;
+  transform-style: preserve-3d;
 }
 
-.leaf img,
-.leaf svg {
+.leaf-inner {
   display: block;
   width: 100%;
   height: auto;
+  will-change: transform;
+  transform-origin: center center;
+  backface-visibility: hidden;
 }
 
 .leaf-sway {
-  animation: leaf-sway 7s var(--ease-out-soft) infinite alternate;
+  animation: leaf-float-sway 6.5s ease-in-out infinite alternate;
   animation-delay: var(--leaf-delay, 0s);
 }
 
-@keyframes leaf-sway {
-  from {
-    transform: translate3d(0, var(--leaf-y), 0) rotate(var(--leaf-rot))
-      translateY(0) rotate(-2.5deg);
+@keyframes leaf-float-sway {
+  0% {
+    transform: translateY(0px) rotate(-2deg) scale(1);
   }
-  to {
-    transform: translate3d(0, var(--leaf-y), 0) rotate(var(--leaf-rot))
-      translateY(-10px) rotate(2.5deg);
+  50% {
+    transform: translateY(-6px) rotate(0.8deg) scale(1.02);
+  }
+  100% {
+    transform: translateY(-12px) rotate(3deg) scale(1.035);
   }
 }
 

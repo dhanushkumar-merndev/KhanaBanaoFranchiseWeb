@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 
 export function Flavours() {
   const trackRef = useRef<HTMLUListElement>(null);
+  const [isScrollable, setIsScrollable] = useState(false);
   const [atStart, setAtStart] = useState(true);
   const [atEnd, setAtEnd] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -17,6 +18,8 @@ export function Flavours() {
     const track = trackRef.current;
     if (!track) return;
     const { scrollLeft, scrollWidth, clientWidth } = track;
+    const canScroll = scrollWidth - clientWidth > 4;
+    setIsScrollable(canScroll);
     setAtStart(scrollLeft <= 4);
     setAtEnd(scrollLeft + clientWidth >= scrollWidth - 4);
 
@@ -65,25 +68,35 @@ export function Flavours() {
         </Reveal>
 
         <Reveal delay={100} className="relative mt-10">
-          {/* Arrows — hidden from AT because the list itself is scrollable/keyboard reachable */}
-          <button
-            type="button"
-            onClick={() => scrollByCard(-1)}
-            disabled={atStart}
-            aria-label="Previous images"
-            className="absolute -left-1 top-1/2 z-20 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-brand-crimson text-white shadow-[0_10px_22px_-10px_rgba(193,39,45,0.95)] transition hover:bg-brand-maroon disabled:pointer-events-none disabled:opacity-30 md:-left-4 md:size-11"
-          >
-            <ChevronLeft className="size-5" strokeWidth={2.4} />
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollByCard(1)}
-            disabled={atEnd}
-            aria-label="Next images"
-            className="absolute -right-1 top-1/2 z-20 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-brand-crimson text-white shadow-[0_10px_22px_-10px_rgba(193,39,45,0.95)] transition hover:bg-brand-maroon disabled:pointer-events-none disabled:opacity-30 md:-right-4 md:size-11"
-          >
-            <ChevronRight className="size-5" strokeWidth={2.4} />
-          </button>
+          {/* Arrow navigation — only visible when the gallery is scrollable */}
+          {isScrollable && (
+            <>
+              <button
+                type="button"
+                onClick={() => scrollByCard(-1)}
+                disabled={atStart}
+                aria-label="Previous images"
+                className={cn(
+                  "absolute -left-2 top-1/2 z-20 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-brand-crimson text-white shadow-[0_10px_22px_-10px_rgba(193,39,45,0.95)] transition duration-200 hover:bg-brand-maroon md:-left-4 md:size-11",
+                  atStart ? "pointer-events-none invisible opacity-0" : "opacity-100"
+                )}
+              >
+                <ChevronLeft className="size-5" strokeWidth={2.4} />
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollByCard(1)}
+                disabled={atEnd}
+                aria-label="Next images"
+                className={cn(
+                  "absolute -right-2 top-1/2 z-20 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-brand-crimson text-white shadow-[0_10px_22px_-10px_rgba(193,39,45,0.95)] transition duration-200 hover:bg-brand-maroon md:-right-4 md:size-11",
+                  atEnd ? "pointer-events-none invisible opacity-0" : "opacity-100"
+                )}
+              >
+                <ChevronRight className="size-5" strokeWidth={2.4} />
+              </button>
+            </>
+          )}
 
           <ul
             ref={trackRef}
@@ -114,24 +127,26 @@ export function Flavours() {
             ))}
           </ul>
 
-          {/* Dots — the practical control on a phone */}
-          <div className="mt-5 flex justify-center gap-2 lg:hidden">
-            {images.flavours.map((image, index) => (
-              <button
-                key={image.src}
-                type="button"
-                onClick={() => goTo(index)}
-                aria-label={`Go to image ${index + 1}`}
-                aria-current={activeIndex === index}
-                className={cn(
-                  "h-2 rounded-full transition-all",
-                  activeIndex === index
-                    ? "w-6 bg-brand-crimson"
-                    : "w-2 bg-brand-red/30",
-                )}
-              />
-            ))}
-          </div>
+          {/* Dots — only visible when scrollable */}
+          {isScrollable && (
+            <div className="mt-5 flex justify-center gap-2 lg:hidden">
+              {images.flavours.map((image, index) => (
+                <button
+                  key={image.src}
+                  type="button"
+                  onClick={() => goTo(index)}
+                  aria-label={`Go to image ${index + 1}`}
+                  aria-current={activeIndex === index}
+                  className={cn(
+                    "h-2 rounded-full transition-all",
+                    activeIndex === index
+                      ? "w-6 bg-brand-crimson"
+                      : "w-2 bg-brand-red/30",
+                  )}
+                />
+              ))}
+            </div>
+          )}
         </Reveal>
       </div>
     </section>

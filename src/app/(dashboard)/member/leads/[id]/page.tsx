@@ -2,18 +2,30 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { TabNav } from "@/components/shell/tab-nav";
 import { Topbar } from "@/components/shell/topbar";
-import { ActivityTab } from "@/components/leads/activity-tab";
-import { FollowupsTab } from "@/components/leads/followups-tab";
 import { LeadHeader } from "@/components/leads/lead-header";
-import { OverviewTab } from "@/components/leads/overview-tab";
-import { EmptyState } from "@/components/ui/feedback";
+import {
+  LEAD_TAB_LABELS,
+  LeadTabPanel,
+  leadTabBadges,
+  parseLeadTab,
+  type LeadTab,
+} from "@/components/leads/lead-tabs";
+import {
+  checkActivationReadiness,
+  checkApprovalReadiness,
+} from "@/app/actions/franchises";
 import { requireProfile } from "@/lib/auth/session";
 import { getLeadDetail } from "@/lib/data/lead-detail";
+import { getLeadPipeline } from "@/lib/data/pipeline";
 import { LeadActions } from "@/app/(dashboard)/admin/leads/[id]/lead-actions";
 
 export const metadata: Metadata = { title: "Lead · Khana Banao" };
 
-const TABS = [
+/**
+ * Members do the pipeline work but none of the approvals, so the stages they
+ * cannot act on at all are left off the strip rather than shown disabled.
+ */
+const MEMBER_TABS: LeadTab[] = [
   "overview",
   "activity",
   "followups",
@@ -22,19 +34,7 @@ const TABS = [
   "agreement",
   "payment",
   "emails",
-] as const;
-type Tab = (typeof TABS)[number];
-
-const TAB_LABELS: Record<Tab, string> = {
-  overview: "Overview",
-  activity: "Activity",
-  followups: "Follow-ups",
-  application: "Application",
-  documents: "Documents",
-  agreement: "Agreement",
-  payment: "Payment",
-  emails: "Emails",
-};
+];
 
 export default async function MemberLeadDetailPage({
   params,
@@ -54,22 +54,20 @@ export default async function MemberLeadDetailPage({
   const lead = await getLeadDetail(id, profile.id);
   if (!lead) notFound();
 
-  const tabParam = Array.isArray(raw.tab) ? raw.tab[0] : raw.tab;
-  const tab: Tab = TABS.includes(tabParam as Tab) ? (tabParam as Tab) : "overview";
+  const [pipeline, approval, activation] = await Promise.all([
+    getLeadPipeline(lead.id),
+    checkApprovalReadiness(lead.id),
+    checkActivationReadiness(lead.id),
+  ]);
 
-  const pendingFollowups = lead.followups.filter(
-    (followup) => followup.status === "PENDING",
-  ).length;
+  const requested = parseLeadTab(raw.tab);
+  const tab = MEMBER_TABS.includes(requested) ? requested : "overview";
+  const badges = leadTabBadges(lead, pipeline);
 
-  const tabItems = TABS.map((key) => ({
+  const tabItems = MEMBER_TABS.map((key) => ({
     href: `/member/leads/${lead.id}?tab=${key}`,
-    label: TAB_LABELS[key],
-    badge:
-      key === "activity"
-        ? lead.activities.length
-        : key === "followups"
-          ? pendingFollowups
-          : undefined,
+    label: LEAD_TAB_LABELS[key],
+    badge: badges[key as keyof typeof badges],
   }));
 
   return (
@@ -103,20 +101,15 @@ export default async function MemberLeadDetailPage({
         />
 
         <div className="pt-5">
-          {tab === "overview" && <OverviewTab lead={lead} />}
-          {tab === "activity" && <ActivityTab activities={lead.activities} />}
-          {tab === "followups" && (
-            <FollowupsTab
-              followups={lead.followups}
-              canManage={lead.current_status !== "REJECTED"}
-            />
-          )}
-          {tab !== "overview" && tab !== "activity" && tab !== "followups" && (
-            <EmptyState
-              title={`${TAB_LABELS[tab]} is not wired up yet`}
-              body="This stage of the pipeline is still being built. Overview, Activity and Follow-ups are live."
-            />
-          )}
+          <LeadTabPanel
+            tab={tab}
+            lead={lead}
+            pipeline={pipeline}
+            approval={approval}
+            activation={activation}
+            members={[]}
+            isAdmin={false}
+          />
         </div>
       </main>
     </>

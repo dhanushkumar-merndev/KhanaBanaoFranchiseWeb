@@ -1,20 +1,38 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 140" fill="none">
   <defs>
-    <linearGradient id="bg1" x1="20" y1="10" x2="130" y2="130" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#7FB069"/>
-      <stop offset=".55" stop-color="#4E8A3C"/>
-      <stop offset="1" stop-color="#2F6B2A"/>
+    <linearGradient id="kb-decor-basil-grad" x1="20" y1="10" x2="140" y2="130" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#A5E08F"/>
+      <stop offset="40%" stop-color="#4F9D55"/>
+      <stop offset="80%" stop-color="#24693D"/>
+      <stop offset="100%" stop-color="#144225"/>
     </linearGradient>
-    <linearGradient id="bg2" x1="70" y1="120" x2="150" y2="30" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#3F7C33"/>
-      <stop offset="1" stop-color="#8CC178"/>
-    </linearGradient>
+    <filter id="kb-decor-basil-shadow" x="-15%" y="-15%" width="140%" height="145%">
+      <feDropShadow dx="1" dy="4" stdDeviation="3.5" flood-color="#0F331C" flood-opacity="0.25"/>
+    </filter>
   </defs>
-  <path d="M78 128C48 112 24 84 26 52 27 32 40 16 60 10c22-7 44 4 54 22 13 23 8 52-9 71-8 9-17 17-27 25Z" fill="url(#bg1)"/>
-  <path d="M78 128C70 100 66 68 72 38c3-15 8-24 12-28" stroke="#2A5C26" stroke-width="2.4" stroke-linecap="round" opacity=".55"/>
-  <path d="M75 104c-9-5-18-13-23-22M76 84c-8-6-14-14-17-23M78 62c-6-6-10-13-12-21M80 44c-4-5-6-10-7-16" stroke="#2A5C26" stroke-width="1.7" stroke-linecap="round" opacity=".38"/>
-  <path d="M85 132c26-6 49-24 56-48 4-15 1-30-9-40-11-11-28-13-41-5-16 10-22 30-19 49 2 15 7 30 13 44Z" fill="url(#bg2)"/>
-  <path d="M85 132c-2-27 2-53 13-75 5-11 11-18 16-22" stroke="#2A5C26" stroke-width="2.2" stroke-linecap="round" opacity=".45"/>
-  <path d="M89 112c8-3 16-9 21-17M93 92c7-4 13-10 16-18M99 72c5-4 9-9 12-15" stroke="#2A5C26" stroke-width="1.5" stroke-linecap="round" opacity=".3"/>
-  <path d="M78 128c2 4 4 7 7 9" stroke="#2A5C26" stroke-width="3" stroke-linecap="round"/>
+  <g filter="url(#kb-decor-basil-shadow)">
+    <!-- Central Branch Stem -->
+    <path d="M76 132c4-35 3-70-6-105" stroke="#2B5B30" stroke-width="4.5" stroke-linecap="round"/>
+    <path d="M76 132c4-35 3-70-6-105" stroke="#7DC56A" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+
+    <!-- Top Left Leaf -->
+    <path d="M72 62C42 57 23 42 18 16c29-2 50 13 54 46Z" fill="url(#kb-decor-basil-grad)"/>
+    <path d="M68 57 27 22M49 41l-1-13M49 41l-15 1" stroke="#E6F5D5" stroke-width="1.6" stroke-linecap="round" opacity="0.65"/>
+
+    <!-- Top Right Leaf -->
+    <path d="M76 89c-2-31 14-52 42-61 8 31-7 54-42 61Z" fill="url(#kb-decor-basil-grad)"/>
+    <path d="m80 82 33-45M94 63l17-4M94 63l1-15" stroke="#E6F5D5" stroke-width="1.6" stroke-linecap="round" opacity="0.65"/>
+
+    <!-- Bottom Left Leaf -->
+    <path d="M76 115c-27 1-47-11-58-34 26-9 48 3 58 34Z" fill="url(#kb-decor-basil-grad)"/>
+    <path d="M70 109 27 84M51 98l-16 1M51 98l-6-13" stroke="#E6F5D5" stroke-width="1.6" stroke-linecap="round" opacity="0.65"/>
+
+    <!-- Bottom Right Leaf -->
+    <path d="M77 120c7-24 25-37 49-38 1 25-17 39-49 38Z" fill="url(#kb-decor-basil-grad)"/>
+    <path d="m84 115 34-27M100 102l15 1M100 102l3-12" stroke="#E6F5D5" stroke-width="1.5" stroke-linecap="round" opacity="0.65"/>
+
+    <!-- Red Chilli Flake Accent -->
+    <circle cx="68" cy="20" r="3.5" fill="#C1272D"/>
+    <circle cx="67" cy="19" r="1" fill="#FF8A8A"/>
+  </g>
 </svg>
