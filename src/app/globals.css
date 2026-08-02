@@ -108,23 +108,6 @@
 }
 
 /* ------------------------------------------------------------------
-   Desktop scale
-
-   A larger root font size scales Tailwind's rem-based layout and type without
-   changing the coordinate system used by portalled overlays. CSS `zoom`
-   cannot be used here because it positions Radix dropdowns off-screen.
-
-   The larger scale starts at 1440px, where the dashboard still has enough
-   room for its desktop layout.
------------------------------------------------------------------- */
-
-@media (min-width: 1440px) {
-  :root {
-    font-size: 125%;
-  }
-}
-
-/* ------------------------------------------------------------------
    Scroll reveal — driven by IntersectionObserver adding [data-revealed]
 ------------------------------------------------------------------ */
 
@@ -160,7 +143,7 @@
   /* Section container */
   .shell {
     width: 100%;
-    max-width: 1200px;
+    max-width: 1600px;
     margin-inline: auto;
     padding-inline: 1.25rem;
   }

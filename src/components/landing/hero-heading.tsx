@@ -95,7 +95,7 @@ export function HeroHeading() {
         {lines.map((line, lineIdx) => (
           <span
             key={lineIdx}
-            className={`${lineIdx > 0 ? "mt-1 " : ""}block ${line.className ?? ""}`}
+            className={`${lineIdx > 0 ? "mt-1 " : ""}block xl:whitespace-nowrap ${line.className ?? ""}`}
           >
             {line.text.split("").map((char, charIdx) => (
               <span
