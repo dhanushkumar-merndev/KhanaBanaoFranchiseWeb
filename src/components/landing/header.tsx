@@ -66,7 +66,7 @@ export function Header() {
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 w-full transition-all duration-300",
+        "sticky top-0 z-50 w-full transition-all duration-300 transform-gpu",
         scrolled
           ? "border-b border-line/80 bg-surface/95 shadow-[0_6px_28px_-18px_rgba(110,40,20,0.5)] backdrop-blur-md"
           : "bg-surface",
@@ -96,7 +96,7 @@ export function Header() {
                 href={linkTo(item.href)}
                 aria-current={isActive ? "true" : undefined}
                 className={cn(
-                  "relative rounded-full px-3 py-2 text-[0.92rem] font-medium transition-colors",
+                  "relative rounded-full px-3 py-2 text-[0.92rem] font-medium transition-colors transform-gpu",
                   isActive
                     ? "text-brand-crimson"
                     : "text-ink-soft hover:text-brand-crimson",
@@ -105,7 +105,7 @@ export function Header() {
                 {item.label}
                 <span
                   className={cn(
-                    "absolute inset-x-3 -bottom-0.5 h-0.5 origin-center rounded-full bg-brand-red transition-transform duration-300",
+                    "absolute inset-x-3 -bottom-0.5 h-0.5 origin-center rounded-full bg-brand-red transition-transform duration-300 transform-gpu",
                     isActive ? "scale-x-100" : "scale-x-0",
                   )}
                 />
@@ -117,7 +117,7 @@ export function Header() {
         <div className="flex items-center gap-2">
           <ContactAction
             kind="phone"
-            className="hidden items-center gap-2 rounded-full bg-brand-crimson px-4 py-2.5 text-sm font-semibold text-white shadow-[0_8px_20px_-10px_rgba(193,39,45,0.9)] transition hover:bg-brand-maroon focus-visible:outline-offset-4 sm:inline-flex"
+            className="hidden items-center gap-2 rounded-full bg-brand-crimson px-4 py-2.5 text-sm font-semibold text-white shadow-[0_8px_20px_-10px_rgba(193,39,45,0.9)] transition-all hover:bg-brand-maroon focus-visible:outline-offset-4 sm:inline-flex transform-gpu active:scale-[0.98]"
           >
             <Phone className="size-4" strokeWidth={2.2} />
             <span>{site.phone}</span>
@@ -129,30 +129,45 @@ export function Header() {
             aria-expanded={open}
             aria-controls="mobile-nav"
             aria-label={open ? "Close menu" : "Open menu"}
-            className="inline-flex size-11 items-center justify-center rounded-full border border-line text-brand-crimson transition hover:bg-surface-muted lg:hidden"
+            className="inline-flex size-11 items-center justify-center rounded-full border border-line text-brand-crimson transition-colors transform-gpu active:scale-[0.95] hover:bg-surface-muted lg:hidden"
           >
             {open ? <X className="size-5" /> : <Menu className="size-5" />}
           </button>
         </div>
       </div>
 
-      {/* Mobile sheet */}
+      {/* Mobile Backdrop Blur Overlay */}
+      <div
+        className={cn(
+          "fixed inset-0 top-16 sm:top-20 z-40 bg-ink/40 backdrop-blur-md transition-opacity duration-300 ease-out transform-gpu lg:hidden",
+          open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none",
+        )}
+        onClick={() => setOpen(false)}
+        aria-hidden="true"
+      />
+
+      {/* Mobile sheet with GPU acceleration and smooth backdrop blur */}
       <div
         id="mobile-nav"
-        hidden={!open}
-        className="border-t border-line bg-surface lg:hidden"
+        aria-hidden={!open}
+        className={cn(
+          "fixed inset-x-0 top-16 sm:top-20 z-50 rounded-b-2xl border-b border-line/80 bg-surface/98 backdrop-blur-xl shadow-2xl transition-all duration-300 ease-out transform-gpu will-change-[transform,opacity] lg:hidden",
+          open
+            ? "translate-y-0 opacity-100 scale-100 pointer-events-auto"
+            : "-translate-y-4 opacity-0 scale-[0.98] pointer-events-none",
+        )}
       >
-        <nav className="shell flex flex-col py-3" aria-label="Mobile">
+        <nav className="shell flex flex-col py-4" aria-label="Mobile">
           {nav.map((item) => (
             <a
               key={item.href}
               href={linkTo(item.href)}
               onClick={() => setOpen(false)}
               className={cn(
-                "rounded-xl px-3 py-3.5 text-sm font-medium transition-colors",
+                "rounded-xl px-4 py-3.5 text-base font-semibold transition-all duration-150 transform-gpu active:scale-[0.98]",
                 active === item.href
-                  ? "bg-surface-muted text-brand-crimson"
-                  : "text-ink hover:bg-surface-muted",
+                  ? "bg-brand-crimson/10 text-brand-crimson"
+                  : "text-ink hover:bg-surface-muted hover:text-brand-crimson",
               )}
             >
               {item.label}
@@ -161,7 +176,7 @@ export function Header() {
           <ContactAction
             kind="phone"
             onClick={() => setOpen(false)}
-            className="mt-2 inline-flex items-center justify-center gap-2 rounded-full bg-brand-crimson px-4 py-3.5 text-sm font-semibold text-white"
+            className="mt-3 inline-flex items-center justify-center gap-2 rounded-full bg-brand-crimson px-5 py-4 text-base font-semibold text-white shadow-lg transition-transform transform-gpu active:scale-[0.98]"
           >
             <Phone className="size-4" strokeWidth={2.2} />
             {site.phone}

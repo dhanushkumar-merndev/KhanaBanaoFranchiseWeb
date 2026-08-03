@@ -53,9 +53,9 @@ export function WhoDoesWhat() {
             <Leaf src="/decor/garlic.svg" className="left-1/2 top-3 w-8 translate-x-[80%] md:w-12" speed={0.11} rotate={-8} sway swayDelay={0.9} opacity={0.75} />
             <Leaf src="/decor/chilli.svg" className="left-1/2 top-1/2 w-7 -translate-x-[200%] -translate-y-1/2 md:w-10" speed={-0.07} rotate={30} sway swayDelay={0.4} opacity={0.65} desktopOnly />
 
-            <div className="relative mx-auto grid max-w-6xl gap-10 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:items-center md:gap-6">
+            <div className="relative mx-auto grid max-w-6xl gap-10 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:items-center md:gap-8 lg:gap-12">
               {/* You provide */}
-              <div className="md:pl-16">
+              <div className="md:pl-0 lg:pl-4">
                 <p className="inline-flex rounded-md bg-gradient-to-r from-brand-gold to-brand-beige px-4 py-1.5 text-[0.8rem] font-bold uppercase tracking-[0.14em] text-white shadow-sm">
                   You Provide
                 </p>
@@ -69,7 +69,7 @@ export function WhoDoesWhat() {
               </div>
 
               {/* Centre seal */}
-              <div className="flex justify-center md:px-2">
+              <div className="flex justify-center shrink-0">
                 <span className="grid size-28 place-items-center rounded-full border-2 border-dashed border-brand-gold/50 bg-surface p-3 shadow-[0_16px_36px_-24px_rgba(110,40,20,0.7)] md:size-36">
                   <span className="grid size-full place-items-center rounded-full bg-surface-muted/60 p-5">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -88,7 +88,7 @@ export function WhoDoesWhat() {
               </div>
 
               {/* We provide */}
-              <div className="md:pr-16 md:text-right">
+              <div className="md:pr-0 lg:pr-4 md:text-right">
                 <p className="inline-flex rounded-md bg-gradient-to-r from-brand-red to-brand-crimson px-4 py-1.5 text-[0.8rem] font-bold uppercase tracking-[0.14em] text-white shadow-sm">
                   {site.name} Provides
                 </p>

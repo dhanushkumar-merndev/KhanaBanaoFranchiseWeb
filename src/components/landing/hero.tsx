@@ -14,16 +14,62 @@ export function Hero() {
         className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(120%_90%_at_78%_18%,rgba(232,201,138,0.28),transparent_58%),radial-gradient(80%_70%_at_8%_84%,rgba(229,72,63,0.08),transparent_60%)]"
       />
 
-      {/* Decorative leaves — parallax on scroll.
-          Kept clear of the headline column on narrow screens, and off the
-          right entirely: the image frame carries its own sprig, and anything
-          floating beside it competes with the silhouette. */}
-      <Leaf src="/decor/leaf-sprig.svg" className="-left-8 top-[26rem] w-14 md:left-[-4%] md:top-28 md:w-28" speed={0.14} rotate={-8} sway opacity={0.8} />
-      <Leaf src="/decor/leaf-mint.svg" className="bottom-28 left-[6%] w-10 md:w-14" speed={-0.1} rotate={12} sway swayDelay={1.2} desktopOnly />
+      {/* Hero Feast Image behind text on mobile & tablet (< lg) with balanced background & overlay */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-10 overflow-hidden lg:hidden"
+      >
+        <img
+          src={images.heroFeast}
+          alt=""
+          className="size-full object-cover object-center opacity-65 scale-105"
+        />
+        {/* Subtle, balanced warm cream gradient wash */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#FFFBF2]/70 via-[#FFFBF2]/50 to-[#FFFBF2]/85" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,251,242,0.5)_0%,rgba(255,251,242,0.82)_100%)]" />
+      </div>
+
+      {/* Left Edge Decor — Mobile & Tablet (< lg) */}
+      <Leaf src="/decor/leaf-sprig.svg" className="absolute -left-6 top-32 w-12 sm:-left-4 sm:top-28 sm:w-16 opacity-80 pointer-events-none z-10 lg:hidden" speed={0.12} rotate={-15} sway swayDelay={0.3} />
+
+      {/* Mobile Pot Decor — Positioned lower down on right side (< md) */}
+      <div className="block md:hidden">
+        <Leaf src="/decor/curry-bowl.svg" className="absolute top-28 right-3 sm:top-32 sm:right-6 w-14 sm:w-16 opacity-85 pointer-events-none z-10" speed={0.08} rotate={10} sway swayDelay={0.6} />
+      </div>
+
+      {/* Crown Seal — Positioned lower on Tablet right side */}
+      <div className="absolute top-16 right-6 md:top-20 md:right-10 z-20 hidden md:block lg:hidden">
+        <div className="grid size-[8.5rem] place-items-center rounded-full bg-gradient-to-br from-brand-maroon to-brand-maroon-dark p-1.5 text-center shadow-[0_22px_44px_-18px_rgba(109,13,18,0.9)] sm:size-[9.5rem]">
+          <div className="grid size-full place-items-center rounded-full border border-dashed border-brand-gold-light/60 px-3">
+            <div>
+              <Crown
+                className="mx-auto size-4 text-brand-gold-light sm:size-5"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+              <p className="mt-1 font-display text-[0.75rem] font-semibold uppercase leading-snug tracking-[0.1em] text-white sm:text-[0.8rem]">
+                Your Success.
+                <br />
+                Our System.
+              </p>
+              <p className="mt-0.5 font-script text-base leading-[1.35] text-brand-gold-light sm:text-[1.3rem]">
+                Stronger
+                <br />
+                Together
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Pot Decor — Positioned higher and vertically aligned with seal on Tablet right side */}
+      <div className="hidden md:block lg:hidden">
+        <Leaf src="/decor/curry-bowl.svg" className="absolute top-[56%] right-6 md:right-10 w-20 md:w-24 opacity-85 pointer-events-none z-10" speed={0.1} rotate={12} sway swayDelay={0.5} />
+      </div>
 
       <div className="shell grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.06fr)] lg:gap-8">
         {/* ---------------- Copy ---------------- */}
-        <div className="relative z-10 max-w-xl">
+        <div className="relative z-10 w-full max-w-2xl lg:max-w-xl">
           <Reveal>
             <p className="text-[0.8rem] font-semibold uppercase tracking-[0.24em] text-ink-soft">
               Join a brand. Build success.
@@ -49,10 +95,10 @@ export function Hero() {
           </Reveal>
 
           <Reveal delay={260}>
-            <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
+            <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center gap-4 sm:gap-6">
               <a
                 href="#enquiry"
-                className="group inline-flex items-center gap-3 rounded-full bg-brand-crimson px-7 py-4 text-[0.9rem] font-semibold uppercase tracking-[0.1em] text-white shadow-[0_16px_34px_-16px_rgba(193,39,45,0.95)] transition hover:-translate-y-0.5 hover:bg-brand-maroon hover:shadow-[0_20px_40px_-16px_rgba(142,18,24,0.95)]"
+                className="group flex sm:inline-flex w-full sm:w-auto items-center justify-center gap-3 rounded-full bg-brand-crimson px-7 py-4 text-[0.9rem] font-semibold uppercase tracking-[0.1em] text-white shadow-[0_16px_34px_-16px_rgba(193,39,45,0.95)] transition hover:-translate-y-0.5 hover:bg-brand-maroon hover:shadow-[0_20px_40px_-16px_rgba(142,18,24,0.95)]"
               >
                 Start Your Journey
                 <span className="grid size-6 place-items-center rounded-full bg-white/20 transition group-hover:translate-x-0.5">
@@ -62,7 +108,7 @@ export function Hero() {
 
               <a
                 href="#how-it-works"
-                className="group inline-flex items-center gap-3 text-ink-soft transition hover:text-brand-crimson"
+                className="group hidden sm:inline-flex items-center gap-3 text-ink-soft transition hover:text-brand-crimson"
               >
                 <span className="relative grid size-12 place-items-center rounded-full border border-brand-red/30 bg-surface text-brand-crimson shadow-sm transition group-hover:border-brand-red">
                   <span className="absolute inset-0 rounded-full ring-1 ring-brand-red/20 transition group-hover:animate-ping" />
@@ -92,8 +138,8 @@ export function Hero() {
           </Reveal>
         </div>
 
-        {/* ---------------- Image + seal ---------------- */}
-        <Reveal variant="zoom" delay={120} className="relative">
+        {/* ---------------- Image + seal (Desktop only) ---------------- */}
+        <Reveal variant="zoom" delay={120} className="relative hidden lg:block">
           <div className="relative mx-auto aspect-[7/6] w-full max-w-[42rem]">
             {/* Warm glow bleeding out from behind the arch */}
             <div
@@ -129,8 +175,10 @@ export function Hero() {
               <Leaf src="/decor/leaf-basil.svg" className="right-[-4.5rem] top-[14%] w-16 md:-right-24 md:w-24" speed={0.06} rotate={28} sway swayDelay={0.8} opacity={0.85} />
             </div>
 
+            {/* Pot decor — Desktop bottom right (as pointed by user arrow) */}
+            <Leaf src="/decor/curry-bowl.svg" className="absolute -bottom-4 -right-6 md:-bottom-6 md:-right-10 w-20 md:w-28 opacity-90 pointer-events-none z-20" speed={0.1} rotate={15} sway swayDelay={0.5} />
+
             {/* "Stronger Together" seal */}
-            {/* z-20 keeps the seal above the decor layer, which is z-10. */}
             <div className="absolute bottom-3 left-3 z-20 sm:bottom-auto sm:left-0 sm:top-1/2 sm:-translate-x-[58%] sm:-translate-y-1/2">
               <div className="grid size-[8.5rem] place-items-center rounded-full bg-gradient-to-br from-brand-maroon to-brand-maroon-dark p-1.5 text-center shadow-[0_22px_44px_-18px_rgba(109,13,18,0.9)] sm:size-[10.5rem]">
                 <div className="grid size-full place-items-center rounded-full border border-dashed border-brand-gold-light/60 px-3">
@@ -145,8 +193,6 @@ export function Hero() {
                       <br />
                       Our System.
                     </p>
-                    {/* Great Vibes has tall ascenders/descenders — it needs
-                        more than `leading-none` or the two lines collide. */}
                     <p className="mt-1 font-script text-lg leading-[1.35] text-brand-gold-light sm:text-[1.4rem]">
                       Stronger
                       <br />
