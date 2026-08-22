@@ -54,8 +54,8 @@ export function EligibilityInvestment() {
                 Investment Overview
               </h3>
               <p className="mt-2 text-[0.92rem] leading-relaxed text-ink-soft">
-                Indicative ranges. Your actual setup cost depends on your city,
-                premises and the scale you launch at.
+                Choose a franchise tier that matches your event ambition. Setup,
+                premises, licences and operating costs are discussed separately.
               </p>
 
               <dl className="mt-6 divide-y divide-line">
@@ -78,8 +78,8 @@ export function EligibilityInvestment() {
               </dl>
 
               <p className="mt-5 rounded-xl bg-surface px-4 py-3 text-[0.84rem] leading-relaxed text-ink-soft ring-1 ring-line">
-                No minimum-guarantee charges and no fee for marketing leads we
-                route to your territory.
+                Monthly royalty is 8%–10% of gross revenue for marketing and app
+                lead allocation. Your applicable rate is confirmed in the agreement.
               </p>
             </div>
           </Reveal>

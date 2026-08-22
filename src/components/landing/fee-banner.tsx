@@ -25,16 +25,14 @@ export function FeeBanner() {
                   className="absolute left-0 top-1/2 hidden h-24 w-px -translate-y-1/2 bg-gradient-to-b from-transparent via-brand-gold-light/40 to-transparent sm:block lg:hidden"
                 />
                 <p className="font-display text-[0.88rem] font-bold uppercase leading-snug tracking-[0.16em] text-brand-gold-light">
-                  One-Time
-                  <br />
-                  Franchise Fee
+                  Franchise Investment
                 </p>
                 <p className="kpi-number mt-2 text-5xl text-white sm:text-[3.4rem]">
                   <span className="align-top text-3xl sm:text-4xl">₹</span>
                   {franchiseFee.display}
                 </p>
                 <p className="mt-3 inline-flex rounded-full bg-gradient-to-r from-brand-gold-light to-brand-gold px-6 py-1.5 text-[0.8rem] font-bold uppercase tracking-[0.2em] text-brand-maroon-dark shadow-sm">
-                  Only
+                  Starting at
                 </p>
               </div>
 

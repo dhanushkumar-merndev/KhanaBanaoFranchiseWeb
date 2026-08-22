@@ -273,11 +273,11 @@ export const termsDoc: LegalDoc = {
       blocks: [
         {
           type: "p",
-          text: "The franchise fee is a one-time payment of ₹50,000, payable after your application is approved and as set out in the franchise agreement. Other costs — setup, equipment, premises, staffing and working capital — are yours to bear and are discussed with you before you commit.",
+          text: "Franchise investment tiers start at ₹50,000 and are available at ₹2 lakh, ₹5 lakh and ₹10 lakh, depending on the event category and scale. The applicable investment, royalty and any other commercial terms are confirmed after approval and in the franchise agreement. Setup, equipment, premises, staffing and working-capital costs are discussed with you before you commit.",
         },
         {
           type: "p",
-          text: "Fees are payable in Indian rupees. Any refund position is governed by the franchise agreement, not by this page.",
+          text: "A monthly royalty of 8% to 10% of gross revenue applies for marketing and app lead allocation, as set out for your tier in the franchise agreement. All payments are in Indian rupees. Any refund position is governed by that agreement, not by this page.",
         },
       ],
     },

@@ -271,7 +271,7 @@ export function ApplicationForm({
             [
               ["informationTrue", "The information I have given is true and correct to the best of my knowledge."],
               ["consentToVerification", "I consent to Khana Banao verifying the details and documents I provide."],
-              ["termsAccepted", "I have read and accept the franchise terms, including the one-time ₹50,000 franchise fee."],
+              ["termsAccepted", "I have read and accept the franchise terms, including the applicable franchise investment and royalty."],
             ] as const
           ).map(([name, text]) => (
             <div key={name}>

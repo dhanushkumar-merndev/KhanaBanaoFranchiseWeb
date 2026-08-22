@@ -17,10 +17,10 @@ const optionalPhoneField = z
   );
 
 export const INVESTMENT_RANGES = [
-  "Under ₹3 lakh",
-  "₹3 – ₹5 lakh",
-  "₹5 – ₹10 lakh",
-  "Above ₹10 lakh",
+  "₹50,000 (Tier 1)",
+  "₹2 lakh (Tier 2)",
+  "₹5 lakh (Tier 3)",
+  "₹10 lakh (Tier 4)",
   "Not decided yet",
 ] as const;
 

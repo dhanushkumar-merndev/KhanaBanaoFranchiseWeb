@@ -23,7 +23,7 @@ export default async function AdminPaymentsPage({
       <main className="min-w-0 flex-1 px-4 py-6 md:px-6">
         <PageHeader
           title="Payments"
-          description="Franchise fees and their proof of transfer. Approving or rejecting a proof happens on the lead's Payment tab."
+          description="Franchise investment payments and their proof of transfer. Approving or rejecting a proof happens on the lead's Payment tab."
         />
         <PaymentsQueueTable
           rows={rows}

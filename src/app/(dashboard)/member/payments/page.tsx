@@ -26,7 +26,7 @@ export default async function MemberPaymentsPage({
       <main className="min-w-0 flex-1 px-4 py-6 md:px-6">
         <PageHeader
           title="Payments"
-          description="Franchise fees on your leads. A rejected proof shows its reason — record a corrected one from the lead's Payment tab."
+          description="Franchise investment payments on your leads. A rejected proof shows its reason — record a corrected one from the lead's Payment tab."
         />
         <PaymentsQueueTable
           rows={rows}

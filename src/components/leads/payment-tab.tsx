@@ -96,12 +96,12 @@ export function PaymentTab({
           title="No payment recorded"
           body={
             stageAllows
-              ? `The one-time franchise fee is ₹${franchiseFee.display}. Record it here with proof of transfer.`
+              ? `The franchise investment payment starts at ₹${franchiseFee.display}. Record the approved tier amount here with proof of transfer.`
               : agreementStatus === "COMPLETED"
                 ? leadStatus === "DOCUMENTS_APPROVED"
                   ? "Documents are approved. Open the Application tab and approve the franchise territory and model to unlock Payment."
                   : `The agreement is complete, but this lead is still at ${LEAD_STATUS_LABELS[leadStatus].toLowerCase()}. Finish the earlier approval gates to open Payment.`
-                : "The franchise fee is recorded once the agreement is completed."
+                : "The franchise investment payment is recorded once the agreement is completed."
           }
           icon={BadgeIndianRupee}
           action={recordButton || undefined}
@@ -397,7 +397,7 @@ function RecordDialog({
       <DialogContent className="max-w-lg">
         <form onSubmit={submit}>
           <DialogHeader>
-            <DialogTitle>Record the franchise fee</DialogTitle>
+            <DialogTitle>Record franchise investment payment</DialogTitle>
             <DialogDescription>
               Money moves outside this system, so the proof of transfer is what
               makes the record trustworthy.

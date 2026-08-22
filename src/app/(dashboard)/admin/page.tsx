@@ -191,7 +191,7 @@ export default async function AdminDashboardPage() {
               />
             </ChartCard>
 
-            <ChartCard title="Payment status" description="Franchise fee collection">
+            <ChartCard title="Payment status" description="Franchise investment payment collection">
               <DonutChartCard
                 data={stats.paymentStatus}
                 height={260}

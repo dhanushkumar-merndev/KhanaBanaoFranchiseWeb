@@ -417,7 +417,7 @@ export async function advanceAgreement(
         activity_type: "STATUS_CHANGE",
         previous_status: after.current_status,
         new_status: "PAYMENT_PENDING",
-        notes: "Awaiting the franchise fee.",
+        notes: "Awaiting the franchise investment payment.",
       });
     }
   }

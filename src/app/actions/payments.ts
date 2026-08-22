@@ -180,7 +180,7 @@ export async function discardPaymentProofUpload(
 }
 
 /**
- * Record the franchise fee and, optionally, its proof (spec §18).
+ * Record a franchise investment payment and, optionally, its proof (spec §18).
  *
  * There is no payment gateway — money moves outside the system and this is the
  * record of it, which is why a proof file matters so much.

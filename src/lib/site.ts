@@ -26,6 +26,7 @@ export const nav = [
   { label: "Home", href: "#home" },
   { label: "Why Partner", href: "#why-partner" },
   { label: "How It Works", href: "#how-it-works" },
+  { label: "Plans & ROI", href: "#plans" },
   { label: "What We Provide", href: "#what-we-provide" },
   { label: "FAQ", href: "#faq" },
   { label: "Contact", href: "#contact" },
@@ -158,20 +159,20 @@ export const howItWorks = [
 
 export const whoDoesWhat = {
   you: [
-    "Kitchen setup",
-    "Staff & service",
-    "Rent & licenses",
-    "Daily operations",
-    "Local event execution",
-    "Delivery logistics",
+    "Client interaction & menu customisation",
+    "Tasting sessions & quotations",
+    "Venue inspections & site management",
+    "Advance & balance collections",
+    "Food preparation & hygiene checks",
+    "Transport, live counters & execution",
   ],
   us: [
-    "Brand & recipes",
-    "Vendor network",
-    "Packaging standards",
-    "Leads & marketing",
-    "Swiggy/Zomato onboarding",
-    "Training & support",
+    "Brand marketing, app & website",
+    "Lead routing & tier qualification",
+    "CRM and platform maintenance",
+    "Tier 3–4 sales closing support",
+    "7-day team training",
+    "SOPs, recipes & operational support",
   ],
 } as const;
 
@@ -180,7 +181,7 @@ export const feeHighlights = [
     icon: "money",
     body: "Low-investment FOFO model — you own and operate your unit",
   },
-  { icon: "percent", body: "Just 7% royalty on executed orders" },
+  { icon: "percent", body: "8%–10% royalty on monthly gross revenue" },
   { icon: "shield", body: "Protected territory — your area stays yours" },
   {
     icon: "docs",
@@ -191,14 +192,14 @@ export const feeHighlights = [
 export const franchiseFee = {
   amount: 50000,
   display: "50,000",
-  royalty: "7%",
+  royalty: "8%–10%",
 } as const;
 
 export const eligibility = [
   {
     icon: "wallet",
     title: "Investment capacity",
-    body: "₹50,000 franchise fee plus working capital for kitchen, staff and licences.",
+    body: "Choose a tier from ₹50,000 to ₹10 lakh, based on the events you want to serve.",
   },
   {
     icon: "store",
@@ -218,23 +219,74 @@ export const eligibility = [
 ] as const;
 
 export const investment = [
-  { label: "One-time franchise fee", value: "₹50,000", note: "Fixed" },
+  { label: "Tier 1: Small events", value: "₹50,000", note: "3-month ROI target" },
   {
-    label: "Kitchen setup & equipment",
-    value: "₹1.5L – ₹4L",
-    note: "Varies by city and scale",
+    label: "Tier 2: Mid-scale events",
+    value: "₹2 lakh",
+    note: "3-month ROI target",
   },
   {
-    label: "Licences & registration",
-    value: "₹15K – ₹30K",
-    note: "FSSAI, GST, trade licence",
+    label: "Tier 3: Corporate events",
+    value: "₹5 lakh",
+    note: "6-month ROI target",
   },
   {
-    label: "Working capital (first 2 months)",
-    value: "₹1L – ₹2L",
-    note: "Raw material, staff, logistics",
+    label: "Tier 4: VIP events",
+    value: "₹10 lakh",
+    note: "6-month ROI target",
   },
-  { label: "Royalty", value: "7%", note: "On executed orders only" },
+  { label: "Monthly royalty", value: "8%–10%", note: "Of gross revenue" },
+] as const;
+
+export const franchiseTiers = [
+  {
+    tier: "Tier 1",
+    name: "Small Events",
+    investment: "₹50,000",
+    roi: "3-month ROI target",
+    scope: "House parties, small gatherings (25–100 pax) and packed meals",
+    aov: "₹30,000",
+    profit: "₹7,500",
+    orders: "7 orders",
+    monthlyTarget: "2.3 orders/month",
+    cadence: "About 1 order every 10–12 days",
+  },
+  {
+    tier: "Tier 2",
+    name: "Mid-Scale Events",
+    investment: "₹2 lakh",
+    roi: "3-month ROI target",
+    scope: "Weddings, engagements, housewarmings and anniversaries",
+    aov: "₹1.5 lakh",
+    profit: "₹37,500",
+    orders: "6 orders",
+    monthlyTarget: "2 orders/month",
+    cadence: "About 1 order every 15 days",
+  },
+  {
+    tier: "Tier 3",
+    name: "Corporate Events",
+    investment: "₹5 lakh",
+    roi: "6-month ROI target",
+    scope: "Business seminars, corporate galas and office meal contracts",
+    aov: "₹3 lakh",
+    profit: "₹75,000",
+    orders: "7 orders",
+    monthlyTarget: "1.2 orders/month",
+    cadence: "About 1 order every 25 days",
+  },
+  {
+    tier: "Tier 4",
+    name: "VIP Events",
+    investment: "₹10 lakh",
+    roi: "6-month ROI target",
+    scope: "Elite weddings, HNI celebrations and celebrity events",
+    aov: "₹7 lakh",
+    profit: "₹1.75 lakh",
+    orders: "6 orders",
+    monthlyTarget: "1 order/month",
+    cadence: "About 1 order every 30 days",
+  },
 ] as const;
 
 export const testimonials = [
@@ -261,11 +313,11 @@ export const testimonials = [
 export const faqs = [
   {
     q: "How much does a Khana Banao franchise cost?",
-    a: "The one-time franchise fee is ₹50,000. Beyond that you invest in your own kitchen setup, licences and working capital — typically ₹2.5L to ₹6L depending on your city and the scale you start at. There are no hidden onboarding charges.",
+    a: "There are four franchise investment tiers: ₹50,000, ₹2 lakh, ₹5 lakh and ₹10 lakh. The right tier depends on the event category and scale you want to serve; your final commercial terms are confirmed in the franchise agreement.",
   },
   {
     q: "What is the royalty structure?",
-    a: "A flat 7% royalty on orders you actually execute. If you do not run an event in a given month, there is no royalty for that month — we do not charge minimum guarantees.",
+    a: "The monthly royalty is 8% to 10% of gross revenue for marketing and app lead allocation. The applicable rate is confirmed for your franchise tier in the agreement.",
   },
   {
     q: "Is my territory protected?",
@@ -273,11 +325,11 @@ export const faqs = [
   },
   {
     q: "Do I need prior food or catering experience?",
-    a: "No. Many of our partners come from completely different backgrounds. We train you and your team on recipes, kitchen SOPs, hygiene standards and event execution before you go live.",
+    a: "No. We provide a comprehensive 7-day culinary, presentation and operational-management training programme for core kitchen staff, alongside SOPs for portions, kitchen setup and uniforms.",
   },
   {
     q: "Who brings the orders?",
-    a: "We run the brand's marketing — Instagram and Facebook lead generation, corporate tie-ups, wedding bookings and aggregator onboarding — and route qualified leads in your territory to you. You execute locally.",
+    a: "Khana Banao manages brand marketing, digital ads, the app, website, lead capture and geographic routing. You handle the local client relationship, quotations, collections and event execution; central sales support is available for Tier 3 and Tier 4 deals.",
   },
   {
     q: "How long does it take to launch?",
@@ -285,6 +337,6 @@ export const faqs = [
   },
   {
     q: "What ongoing support do I get?",
-    a: "A dedicated support owner, ongoing chef and operations guidance, refreshed marketing creatives, updated rate cards and vendor introductions — for as long as your franchise is active.",
+    a: "You receive central marketing and lead routing, CRM support, standardized portion calculators, kitchen setup protocols, server-uniform guidelines, training and operational guidance.",
   },
 ] as const;

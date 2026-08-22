@@ -503,7 +503,7 @@ export function PaymentsQueueTable({
       ]}
       rowHref={(row) => `${basePath}/${row.leadId}?tab=payment`}
       emptyTitle="No payments recorded"
-      emptyBody="The franchise fee is recorded once an agreement is completed."
+      emptyBody="The franchise investment payment is recorded once an agreement is completed."
     />
   );
 }

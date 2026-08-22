@@ -261,7 +261,7 @@ export async function approveFranchise(
       {
         from: "AGREEMENT_COMPLETED",
         to: "PAYMENT_PENDING",
-        notes: "Awaiting the franchise fee.",
+        notes: "Awaiting the franchise investment payment.",
       },
     ];
 

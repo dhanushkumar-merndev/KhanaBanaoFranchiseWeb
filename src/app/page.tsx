@@ -3,6 +3,7 @@ import { EligibilityInvestment } from "@/components/landing/eligibility-investme
 import { EnquiryForm } from "@/components/landing/enquiry-form";
 import { Faq } from "@/components/landing/faq";
 import { FeeBanner } from "@/components/landing/fee-banner";
+import { FranchisePlans } from "@/components/landing/franchise-plans";
 import { Flavours } from "@/components/landing/flavours";
 import { Footer } from "@/components/landing/footer";
 import { Header } from "@/components/landing/header";
@@ -24,6 +25,7 @@ export default function HomePage() {
         <StatsBar />
         <WhyPartner />
         <HowItWorks />
+        <FranchisePlans />
         <WhoDoesWhat />
         <FeeBanner />
         <EligibilityInvestment />
