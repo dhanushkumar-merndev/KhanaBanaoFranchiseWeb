@@ -8,11 +8,11 @@ export const site = {
   name: "Khana Banao",
   legalName: "Khana Banao Catering",
   tagline: "Powered By Food Chain System",
-  phone: "+91 88827 97108",
-  phoneHref: "tel:+918882797108",
-  whatsapp: "918882797108",
+  phone: "+91 94227 99299",
+  phoneHref: "tel:+919422799299",
+  whatsapp: "919422799299",
   whatsappHref:
-    "https://wa.me/918882797108?text=Hi%2C%20I%27m%20interested%20in%20the%20Khana%20Banao%20franchise",
+    "https://wa.me/919422799299?text=Hi%2C%20I%27m%20interested%20in%20the%20Khana%20Banao%20franchise",
   email: "franchise@khanabanao.com",
   location: "India",
   socials: {

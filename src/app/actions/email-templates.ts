@@ -24,7 +24,7 @@ const SAMPLE: TemplateVars = {
   password_setup_link: "https://example.com/set-password/sample-token",
   training_date: "12 Aug 2026",
   support_name: "Priya Menon",
-  support_phone: "+91 88827 97108",
+  support_phone: "+91 94227 99299",
 };
 
 export async function updateEmailTemplate(
