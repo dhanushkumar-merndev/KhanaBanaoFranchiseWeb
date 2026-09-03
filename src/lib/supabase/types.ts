@@ -343,6 +343,7 @@ export type AppSettingsRow = {
   id: boolean;
   round_robin_enabled: boolean;
   last_assigned_position: number;
+  plan_tier: "free" | "pro";
   updated_by: string | null;
   updated_at: string;
 };
@@ -464,6 +465,15 @@ export type Database = {
       admin_delete_lead_cascade: {
         Args: { target_lead: string };
         Returns: Json;
+      };
+      admin_database_size: { Args: Record<never, never>; Returns: number };
+      admin_table_sizes: {
+        Args: Record<never, never>;
+        Returns: { table_name: string; total_bytes: number; row_estimate: number }[];
+      };
+      admin_object_storage_usage: {
+        Args: Record<never, never>;
+        Returns: { bucket_id: string; object_count: number; total_bytes: number }[];
       };
     };
     Enums: Record<never, never>;

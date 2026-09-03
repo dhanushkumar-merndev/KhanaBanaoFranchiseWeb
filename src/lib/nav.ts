@@ -20,7 +20,8 @@ export type NavIcon =
   | "setup"
   | "templates"
   | "logs"
-  | "activity";
+  | "activity"
+  | "storage";
 
 export type NavGroup = { title: string; items: NavItem[] };
 
@@ -55,6 +56,7 @@ const ADMIN_NAV: NavGroup[] = [
       { href: "/admin/email-templates", label: "Email templates", icon: "templates" },
       { href: "/admin/email-logs", label: "Email logs", icon: "logs" },
       { href: "/admin/activity", label: "Activity", icon: "activity" },
+      { href: "/admin/storage", label: "Storage", icon: "storage" },
     ],
   },
 ];

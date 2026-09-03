@@ -10,6 +10,7 @@ import {
   ClipboardList,
   FileSignature,
   FileText,
+  HardDrive,
   LayoutDashboard,
   Mail,
   Menu,
@@ -41,6 +42,7 @@ const ICONS: Record<NavIcon, LucideIcon> = {
   templates: Mail,
   logs: Mail,
   activity: Activity,
+  storage: HardDrive,
 };
 
 export function Sidebar({ role }: { role: Role }) {
