@@ -1,7 +1,7 @@
 "use client";
 
 import * as Accordion from "@radix-ui/react-accordion";
-import { ChevronDown, Mail } from "lucide-react";
+import { ChevronDown, FileText, Mail } from "lucide-react";
 import { StatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/feedback";
 import { formatDateTime } from "@/lib/format";
@@ -98,6 +98,22 @@ export function EmailsTab({ emails }: { emails: EmailLogRow[] }) {
                 <p className="text-[0.78rem] italic text-ink-soft">
                   No message preview was recorded.
                 </p>
+              )}
+
+              {email.attachment_names.length > 0 && (
+                <div className="mt-3 rounded-lg border border-line bg-surface-muted/55 px-3 py-2.5">
+                  <p className="flex items-center gap-1.5 text-[0.72rem] font-semibold text-ink">
+                    <FileText className="size-3.5" aria-hidden="true" />
+                    Attached to this email
+                  </p>
+                  <ul className="mt-1 space-y-0.5">
+                    {email.attachment_names.map((name) => (
+                      <li key={name} className="text-[0.75rem] text-ink-soft">
+                        {name}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
 
               {email.error_message && (

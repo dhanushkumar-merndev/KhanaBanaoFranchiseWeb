@@ -181,6 +181,9 @@ async function logAndReturn(
         status: result.status,
         provider_id: result.providerId ?? null,
         error_message: result.error ?? null,
+        attachment_names: (args.attachments ?? [])
+          .filter((attachment): attachment is EmailAttachment => attachment !== null)
+          .map((attachment) => attachment.name),
         lead_id: args.leadId ?? null,
         triggered_by: args.triggeredBy ?? null,
       });

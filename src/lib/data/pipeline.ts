@@ -148,6 +148,7 @@ export type EmailLogRow = {
   body_preview: string | null;
   status: EmailLogStatus;
   error_message: string | null;
+  attachment_names: string[];
   created_at: string;
   triggeredByName: string | null;
 };
@@ -201,7 +202,7 @@ export async function getLeadPipeline(leadId: string): Promise<LeadPipeline> {
     supabase
       .from("email_logs")
       .select(
-        "id, template_key, to_email, subject, body_preview, status, error_message, created_at, triggered_by",
+        "id, template_key, to_email, subject, body_preview, status, error_message, attachment_names, created_at, triggered_by",
       )
       .eq("lead_id", leadId)
       .or("template_key.is.null,template_key.neq.DOCUMENT_ACCESS_OTP")
@@ -363,6 +364,7 @@ export async function getLeadPipeline(leadId: string): Promise<LeadPipeline> {
       body_preview: log.body_preview,
       status: log.status,
       error_message: log.error_message,
+      attachment_names: log.attachment_names,
       created_at: log.created_at,
       triggeredByName: log.triggered_by
         ? (names.get(log.triggered_by) ?? null)

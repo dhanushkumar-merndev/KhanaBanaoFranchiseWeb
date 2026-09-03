@@ -43,7 +43,7 @@ export default async function EmailLogsPage({
   let query = supabase
     .from("email_logs")
     .select(
-      "id, template_key, to_email, subject, body_preview, status, error_message, created_at, triggered_by",
+      "id, template_key, to_email, subject, body_preview, status, error_message, attachment_names, created_at, triggered_by",
       { count: "exact" },
     )
     .or("template_key.is.null,template_key.neq.DOCUMENT_ACCESS_OTP");
@@ -70,6 +70,7 @@ export default async function EmailLogsPage({
     body_preview: log.body_preview,
     status: log.status,
     error_message: log.error_message,
+    attachment_names: log.attachment_names,
     created_at: log.created_at,
     triggeredByName: log.triggered_by
       ? (names.get(log.triggered_by) ?? null)

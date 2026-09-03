@@ -3,7 +3,12 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, CircleDashed, FileSignature } from "lucide-react";
+import {
+  CheckCircle2,
+  CircleDashed,
+  FileSignature,
+  FileText,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   approveFranchise,
@@ -67,12 +72,20 @@ export function FranchiseApprovalPanel({
               </p>
             </div>
           </div>
-          <Button asChild size="sm">
-            <Link href="?tab=agreement">
-              <FileSignature />
-              Continue to agreement
-            </Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild size="sm" variant="outline">
+              <Link href="?tab=application">
+                <FileText />
+                Approval record and letter
+              </Link>
+            </Button>
+            <Button asChild size="sm">
+              <Link href="?tab=agreement">
+                <FileSignature />
+                Continue to agreement
+              </Link>
+            </Button>
+          </div>
         </CardContent>
       </Card>
     );
@@ -219,10 +232,10 @@ function ApproveFranchiseDialog({
                   />
                 </Field>
                 <Field
-                  label="Approval letter"
+                  label="Approval letter PDF"
                   htmlFor="doc-ap-letter"
                   error={errors.letter}
-                  hint={`PDF up to ${MAX_DOCUMENT_UPLOAD_MB} MB, optional.`}
+                  hint={`Required for “Approve and email PDF”. Stored under Application → Approval record. PDF up to ${MAX_DOCUMENT_UPLOAD_MB} MB.`}
                 >
                   <Input
                     id="doc-ap-letter"
@@ -255,7 +268,7 @@ function ApproveFranchiseDialog({
               disabled={busy}
               onClick={() => void submit(false)}
             >
-              Approve without email
+              Approve without sending email
             </Button>
             <Button
               type="button"
@@ -264,7 +277,7 @@ function ApproveFranchiseDialog({
               disabled={busy}
               onClick={() => void submit(true)}
             >
-              Approve and send email
+              Approve and email PDF
             </Button>
           </DialogFooter>
         </form>

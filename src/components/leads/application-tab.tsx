@@ -9,7 +9,10 @@ import {
   sendApplicationLink,
   startApplicationReview,
 } from "@/app/actions/applications";
-import { getApprovalLetterUrl } from "@/app/actions/franchises";
+import {
+  getApprovalLetterUrl,
+  resendApprovalEmail,
+} from "@/app/actions/franchises";
 import { Badge, StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -290,7 +293,10 @@ export function ApplicationTab({
               </p>
             )}
             {application.hasApprovalLetter && (
-              <ApprovalLetterButton applicationId={application.id} />
+              <ApprovalLetterActions
+                applicationId={application.id}
+                canResend={isAdmin}
+              />
             )}
           </CardContent>
         )}
@@ -431,8 +437,16 @@ function Detail({ label, value }: { label: string; value: string | null }) {
   );
 }
 
-function ApprovalLetterButton({ applicationId }: { applicationId: string }) {
+function ApprovalLetterActions({
+  applicationId,
+  canResend,
+}: {
+  applicationId: string;
+  canResend: boolean;
+}) {
+  const router = useRouter();
   const [pending, setPending] = useState(false);
+  const [resendOpen, setResendOpen] = useState(false);
 
   const open = async () => {
     setPending(true);
@@ -446,10 +460,33 @@ function ApprovalLetterButton({ applicationId }: { applicationId: string }) {
   };
 
   return (
-    <Button size="sm" variant="outline" className="mt-3" loading={pending} onClick={() => void open()}>
-      <ExternalLink />
-      Approval letter
-    </Button>
+    <div className="mt-3 flex flex-wrap gap-2">
+      <Button size="sm" variant="outline" loading={pending} onClick={() => void open()}>
+        <ExternalLink />
+        View approval letter
+      </Button>
+      {canResend && (
+        <>
+          <Button size="sm" variant="secondary" onClick={() => setResendOpen(true)}>
+            <Send />
+            Resend approval email
+          </Button>
+          <ConfirmDialog
+            open={resendOpen}
+            onOpenChange={setResendOpen}
+            title="Resend approval email?"
+            description="The stored approval letter PDF will be attached and emailed to the applicant again."
+            confirmLabel="Send email with PDF"
+            successMessage="Approval email and PDF sent."
+            onConfirm={async () => {
+              const result = await resendApprovalEmail(applicationId);
+              if (result.ok) router.refresh();
+              return result;
+            }}
+          />
+        </>
+      )}
+    </div>
   );
 }
 

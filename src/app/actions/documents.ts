@@ -890,7 +890,7 @@ export async function approveDocument(
 
     if (lead) {
       await sendTemplateEmail({
-        templateKey: "APPLICATION_APPROVED",
+        templateKey: "DOCUMENT_APPROVED",
         to: { email: lead.email, name: lead.full_name },
         vars: {
           applicant_name: lead.full_name,

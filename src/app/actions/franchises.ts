@@ -11,7 +11,10 @@ import {
 } from "@/lib/domain/enums";
 import { canApproveFranchise, canTransition } from "@/lib/domain/transitions";
 import { overallDocumentStatus } from "@/lib/domain/documents";
-import type { EmailAttachment } from "@/lib/email/attachments";
+import {
+  storedFileAttachment,
+  type EmailAttachment,
+} from "@/lib/email/attachments";
 import { sendTemplateEmail } from "@/lib/email/send";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -34,6 +37,12 @@ function refresh(leadId: string) {
   revalidatePath("/admin/leads");
   revalidatePath("/admin");
 }
+
+const APPROVAL_EMAIL = {
+  subject: "Congratulations — your KHANA BANAO franchise is approved",
+  bodyHtml:
+    '<h2 style="margin:0 0 16px;font-family:Georgia,\'Times New Roman\',serif;font-size:21px;line-height:1.3;color:#8e1218;font-weight:700;">Your franchise is approved</h2><p>Hi {{applicant_name}},</p><p>Application <strong>{{application_number}}</strong> has been approved for the territory <strong>{{territory}}</strong>. Congratulations &mdash; we are glad to have you with us.</p><p>Your official approval letter is attached to this email as a PDF.</p><p>Our team will share your franchise agreement next. Nothing is needed from you until it arrives.</p>',
+} as const;
 
 // -------------------------------------------------------------------
 // Franchise approval (spec §16)
@@ -102,6 +111,7 @@ export async function approveFranchise(
   const investmentRaw = String(formData.get("investment") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
   const letter = formData.get("letter");
+  const hasLetter = letter instanceof File && letter.size > 0;
 
   const fieldErrors: Record<string, string> = {};
   if (!territory) fieldErrors.territory = "Record the approved territory";
@@ -110,6 +120,9 @@ export async function approveFranchise(
   const investment = investmentRaw ? Number(investmentRaw) : null;
   if (investmentRaw && (!Number.isFinite(investment) || investment! < 0)) {
     fieldErrors.investment = "Enter a valid amount";
+  }
+  if (sendEmail && !hasLetter) {
+    fieldErrors.letter = "Upload the approval letter PDF to send with this email";
   }
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -178,7 +191,7 @@ export async function approveFranchise(
 
   let letterPath: string | null = null;
   let letterAttachment: EmailAttachment | null = null;
-  if (letter instanceof File && letter.size > 0) {
+  if (hasLetter) {
     const check = checkUpload(letter, {
       maxBytes: MAX_AGREEMENT_BYTES,
       allowed: ALLOWED_AGREEMENT_TYPES,
@@ -291,8 +304,9 @@ export async function approveFranchise(
     );
   }
 
+  let emailFailure: string | null = null;
   if (sendEmail) {
-    await sendTemplateEmail({
+    const emailResult = await sendTemplateEmail({
       templateKey: "APPLICATION_APPROVED",
       to: { email: lead.email, name: lead.full_name },
       vars: {
@@ -303,17 +317,16 @@ export async function approveFranchise(
       },
       ...(letterAttachment
         ? {
-            override: {
-              subject: "Congratulations — your KHANA BANAO franchise is approved",
-              bodyHtml:
-                '<h2 style="margin:0 0 16px;font-family:Georgia,\'Times New Roman\',serif;font-size:21px;line-height:1.3;color:#8e1218;font-weight:700;">Your franchise is approved</h2><p>Hi {{applicant_name}},</p><p>Application <strong>{{application_number}}</strong> has been approved for the territory <strong>{{territory}}</strong>. Congratulations &mdash; we are glad to have you with us.</p><p>Your official approval letter is attached to this email as a PDF.</p><p>Our team will share your franchise agreement next. Nothing is needed from you until it arrives.</p>',
-            },
+            override: APPROVAL_EMAIL,
             attachments: [letterAttachment],
           }
         : {}),
       leadId,
       triggeredBy: profile.id,
     });
+    if (emailResult.status !== "SENT") {
+      emailFailure = emailResult.error ?? "The email provider did not accept the message.";
+    }
   }
 
   await supabase.from("activity_logs").insert({
@@ -325,6 +338,91 @@ export async function approveFranchise(
   });
 
   refresh(leadId);
+  if (emailFailure) {
+    return {
+      ok: false,
+      message: `Franchise approved and the letter was saved, but the email was not sent: ${emailFailure}`,
+    };
+  }
+  return { ok: true };
+}
+
+/** Re-send an already stored approval letter without approving the lead again. */
+export async function resendApprovalEmail(
+  applicationId: string,
+): Promise<ActionResult> {
+  const profile = await requireAdmin();
+  const supabase = createAdminClient();
+
+  const { data: application } = await supabase
+    .from("applications")
+    .select(
+      "id, lead_id, application_number, status, approved_territory, approval_letter_path",
+    )
+    .eq("id", applicationId)
+    .maybeSingle();
+
+  if (!application) {
+    return { ok: false, message: "That application no longer exists." };
+  }
+  if (application.status !== "APPROVED") {
+    return { ok: false, message: "Only an approved application can send this letter." };
+  }
+  if (!application.approval_letter_path) {
+    return { ok: false, message: "No approval letter was uploaded." };
+  }
+
+  const { data: lead } = await supabase
+    .from("leads")
+    .select("lead_number, full_name, email")
+    .eq("id", application.lead_id)
+    .maybeSingle();
+
+  if (!lead) return { ok: false, message: "That lead no longer exists." };
+
+  const attachment = await storedFileAttachment(
+    STORAGE_BUCKETS.approvalLetters,
+    application.approval_letter_path,
+    `${application.application_number}-approval-letter.pdf`,
+  );
+  if (!attachment) {
+    return {
+      ok: false,
+      message: "The stored approval letter could not be read. Upload it again before sending.",
+    };
+  }
+
+  const result = await sendTemplateEmail({
+    templateKey: "APPLICATION_APPROVED",
+    to: { email: lead.email, name: lead.full_name },
+    vars: {
+      applicant_name: lead.full_name,
+      lead_number: lead.lead_number,
+      application_number: application.application_number,
+      territory: application.approved_territory ?? "the approved territory",
+    },
+    override: APPROVAL_EMAIL,
+    attachments: [attachment],
+    leadId: application.lead_id,
+    triggeredBy: profile.id,
+  });
+
+  if (result.status !== "SENT") {
+    return {
+      ok: false,
+      message: result.error ?? "The email provider did not accept the message.",
+    };
+  }
+
+  await supabase.from("activity_logs").insert({
+    actor_id: profile.id,
+    entity_type: "application",
+    entity_id: application.id,
+    action: "APPROVAL_EMAIL_RESENT",
+    summary: `${application.application_number} approval letter emailed again.`,
+  });
+
+  refresh(application.lead_id);
   return { ok: true };
 }
 

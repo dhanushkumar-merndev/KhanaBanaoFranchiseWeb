@@ -322,6 +322,7 @@ export type EmailLogRow = {
   status: EmailLogStatus;
   provider_id: string | null;
   error_message: string | null;
+  attachment_names: string[];
   lead_id: string | null;
   triggered_by: string | null;
   created_at: string;
