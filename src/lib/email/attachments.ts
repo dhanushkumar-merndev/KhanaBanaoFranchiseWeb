@@ -1,6 +1,5 @@
 import "server-only";
 
-import { emailAssetBaseUrl } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { BucketName } from "@/lib/storage";
 
@@ -21,12 +20,6 @@ export type EmailAttachment = { name: string } & (
  * inflates by a third, so one file of this size still leaves room for another.
  */
 const MAX_ATTACHMENT_BYTES = 6 * 1024 * 1024;
-
-/** The public franchise brochure, served from /public. */
-export const BROCHURE_ATTACHMENT: EmailAttachment = {
-  name: "Khana-Banao-Franchise-Brochure.pdf",
-  url: `${emailAssetBaseUrl}/Khana-banao-Franchise-Master.pdf`,
-};
 
 /**
  * Read a file out of a private bucket and encode it for attachment.

@@ -1,15 +1,12 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { hashToken, verifyToken } from "@/lib/tokens";
 import { mergeWithAutofill, type AutofillSource } from "@/lib/agreement/autofill";
 import type { AgreementFieldValues } from "@/lib/agreement/fields";
 
 /**
- * Reads for the generated agreement — one place so the staff editor, the
- * preview and the customer's public page all assemble the document from
- * identical inputs. A document that renders differently for staff than for the
- * person signing it is the one bug this feature cannot afford.
+ * Reads for the generated agreement — one place so saving, downloading and
+ * email attachment generation all assemble the document from identical input.
  */
 
 export type AgreementDocument = {
@@ -96,49 +93,4 @@ export async function loadAgreementDocument(
 
   if (!agreement) return null;
   return assemble(agreement, agreement.lead_id);
-}
-
-export type AgreementTokenFailure = "invalid" | "expired" | "revoked" | "not_found";
-
-/**
- * Resolve a customer's agreement link.
- *
- * Deliberately separate from resolveToken(): that one returns the lead and
- * application for the forms, while this one has to reach the agreement the
- * token was minted against. Failures stay coarse so a token cannot be probed.
- */
-export async function resolveAgreementToken(
-  token: string,
-): Promise<
-  | { ok: true; data: AgreementDocument }
-  | { ok: false; reason: AgreementTokenFailure }
-> {
-  if (!token || !verifyToken(token, "AGREEMENT")) {
-    return { ok: false, reason: "invalid" };
-  }
-
-  const supabase = createAdminClient();
-
-  const { data: row } = await supabase
-    .from("application_tokens")
-    .select("id, agreement_id, expires_at, revoked_at")
-    .eq("token_hash", hashToken(token))
-    .eq("purpose", "AGREEMENT")
-    .maybeSingle();
-
-  if (!row?.agreement_id) return { ok: false, reason: "not_found" };
-  if (row.revoked_at) return { ok: false, reason: "revoked" };
-  if (new Date(row.expires_at).getTime() < Date.now()) {
-    return { ok: false, reason: "expired" };
-  }
-
-  const document = await loadAgreementDocument(row.agreement_id);
-  if (!document) return { ok: false, reason: "not_found" };
-
-  await supabase
-    .from("application_tokens")
-    .update({ used_at: new Date().toISOString() })
-    .eq("id", row.id);
-
-  return { ok: true, data: document };
 }

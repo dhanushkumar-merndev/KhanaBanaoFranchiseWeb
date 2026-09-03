@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Download, ExternalLink, FileSignature, Upload, Wand2 } from "lucide-react";
+import { Download, FileSignature, Upload, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   advanceAgreement,
@@ -74,7 +74,7 @@ export function AgreementTab({
 }) {
   const [advanceOpen, setAdvanceOpen] = useState(false);
   const [note, setNote] = useState("");
-  const [opening, setOpening] = useState<"view" | "download" | null>(null);
+  const [downloadingFile, setDownloadingFile] = useState(false);
 
   const target = agreement ? nextStatus(agreement.status) : null;
   const stageOpen =
@@ -86,15 +86,15 @@ export function AgreementTab({
   // member; the signed-copy upload and the status sequence stay with admins.
   const canPrepareDocument = (isAdmin || isAssignedMember) && stageOpen;
 
-  const openFile = async (download: boolean) => {
+  const downloadFile = async () => {
     if (!agreement) return;
-    setOpening(download ? "download" : "view");
+    setDownloadingFile(true);
     try {
-      const result = await getAgreementUrl(agreement.id, download);
-      if (result.ok) window.open(result.data.url, "_blank", "noopener");
+      const result = await getAgreementUrl(agreement.id, true);
+      if (result.ok) window.location.assign(result.data.url);
       else toast.error(result.message);
     } finally {
-      setOpening(null);
+      setDownloadingFile(false);
     }
   };
 
@@ -145,26 +145,15 @@ export function AgreementTab({
 
           <div className="flex flex-wrap gap-2">
             {agreement.hasFile && (
-              <>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  loading={opening === "view"}
-                  onClick={() => void openFile(false)}
-                >
-                  <ExternalLink />
-                  View
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  loading={opening === "download"}
-                  onClick={() => void openFile(true)}
-                  aria-label="Download agreement"
-                >
-                  <Download />
-                </Button>
-              </>
+              <Button
+                size="sm"
+                variant="outline"
+                loading={downloadingFile}
+                onClick={() => void downloadFile()}
+              >
+                <Download />
+                Download agreement
+              </Button>
             )}
             {canManageAgreement && <UploadAgreementButton leadId={leadId} replace />}
             {canManageAgreement && target && (
@@ -261,7 +250,7 @@ export function AgreementTab({
           title={`${ADVANCE_LABEL[agreement.status]}?`}
           description={
             target === "SENT"
-              ? "The applicant is emailed a note that their agreement is on its way."
+              ? "The applicant receives the personalised agreement as one PDF attachment."
               : "Recorded against the agreement with a timestamp. No email is sent for this stage."
           }
           confirmLabel={AGREEMENT_STATUS_LABELS[target]}

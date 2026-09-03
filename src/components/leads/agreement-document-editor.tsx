@@ -3,10 +3,8 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Check,
   ChevronDown,
-  Copy,
-  Eye,
+  Download,
   RotateCcw,
   Save,
   Send,
@@ -14,22 +12,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  previewAgreementDocument,
+  downloadAgreementDocument,
   saveAgreementDocument,
   sendAgreementDocument,
 } from "@/app/actions/agreements";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import {
-  Dialog,
-  DialogBody,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { AGREEMENT_CLAUSES } from "@/lib/agreement/clauses";
 import {
@@ -66,13 +55,8 @@ export function AgreementDocumentEditor({
   const [values, setValues] = useState(state.values);
   const [overrides, setOverrides] = useState(state.overrides);
   const [saving, setSaving] = useState(false);
-  const [previewing, setPreviewing] = useState(false);
-  const [preview, setPreview] = useState<{ html: string; missing: string[] } | null>(
-    null,
-  );
+  const [downloading, setDownloading] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
-  const [sentUrl, setSentUrl] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
 
   const dirty =
     JSON.stringify(values) !== JSON.stringify(state.values) ||
@@ -109,21 +93,31 @@ export function AgreementDocumentEditor({
     }
   };
 
-  const openPreview = async () => {
-    setPreviewing(true);
+  const download = async () => {
+    setDownloading(true);
     try {
-      const result = await previewAgreementDocument(
-        state.agreementId,
-        values,
-        overrides,
-      );
+      if (dirty && !(await save())) return;
+      const result = await downloadAgreementDocument(state.agreementId);
       if (!result.ok) {
         toast.error(result.message);
         return;
       }
-      setPreview(result.data);
+      const binary = atob(result.data.content);
+      const bytes = new Uint8Array(binary.length);
+      for (let index = 0; index < binary.length; index += 1) {
+        bytes[index] = binary.charCodeAt(index);
+      }
+      const url = URL.createObjectURL(
+        new Blob([bytes], { type: "application/pdf" }),
+      );
+      const anchor = window.document.createElement("a");
+      anchor.href = url;
+      anchor.download = result.data.fileName;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      toast.success("Agreement PDF downloaded.");
     } finally {
-      setPreviewing(false);
+      setDownloading(false);
     }
   };
 
@@ -142,11 +136,11 @@ export function AgreementDocumentEditor({
           <Button
             size="sm"
             variant="ghost"
-            loading={previewing}
-            onClick={() => void openPreview()}
+            loading={downloading}
+            onClick={() => void download()}
           >
-            <Eye />
-            Preview
+            <Download />
+            Download agreement
           </Button>
           <Button
             size="sm"
@@ -202,41 +196,6 @@ export function AgreementDocumentEditor({
         <ClauseOverrides overrides={overrides} onChange={setOverrides} />
       </CardContent>
 
-      {preview && (
-        <Dialog
-          open={Boolean(preview)}
-          onOpenChange={(open) => !open && setPreview(null)}
-        >
-          <DialogContent className="max-w-4xl">
-            <DialogHeader>
-              <DialogTitle>Agreement preview</DialogTitle>
-              <DialogDescription>
-                Exactly what the applicant will see at their link.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogBody className="space-y-3">
-              {preview.missing.length > 0 && (
-                <p className="rounded-lg border border-warn/30 bg-warn/8 px-3 py-2 text-[0.8rem] text-ink">
-                  Still blank: {preview.missing.join(", ")}.
-                </p>
-              )}
-              {/* Sandboxed: clause overrides are admin-authored HTML. */}
-              <iframe
-                title="Agreement preview"
-                srcDoc={preview.html}
-                sandbox=""
-                className="h-[34rem] w-full rounded-xl border border-line bg-white"
-              />
-            </DialogBody>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setPreview(null)}>
-                Close
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
-
       <ConfirmDialog
         open={sendOpen}
         onOpenChange={setSendOpen}
@@ -250,10 +209,9 @@ export function AgreementDocumentEditor({
           }
           const result = await sendAgreementDocument(state.agreementId);
           if (result.ok) {
-            setSentUrl(result.data.url);
             if (!result.data.emailSent) {
               toast.warning(
-                "The agreement is ready, but the email did not go out. Share the link below.",
+                "The PDF is ready, but the email provider did not send it. Download it and send it manually.",
               );
             }
             router.refresh();
@@ -262,36 +220,11 @@ export function AgreementDocumentEditor({
         }}
       >
         <p className="text-[0.82rem] leading-relaxed text-ink-soft">
-          The applicant receives an email with a private link to this agreement,
-          which they can read, print or save as a PDF. Any link sent earlier
-          stops working. The agreement moves to <strong>Sent</strong>.
+          The applicant receives one personalised, auto-filled PDF attachment.
+          There is no web-page link or “Open agreement” button. The agreement
+          moves to <strong>Sent</strong>.
         </p>
       </ConfirmDialog>
-
-      {sentUrl && (
-        <CardContent className="pt-0">
-          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-ok/30 bg-ok/8 px-3 py-2">
-            <span className="text-[0.78rem] font-semibold text-ink">
-              Applicant link
-            </span>
-            <code className="min-w-0 flex-1 truncate font-mono text-[0.72rem] text-ink-soft">
-              {sentUrl}
-            </code>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                void navigator.clipboard.writeText(sentUrl);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
-              }}
-            >
-              {copied ? <Check /> : <Copy />}
-              {copied ? "Copied" : "Copy"}
-            </Button>
-          </div>
-        </CardContent>
-      )}
     </Card>
   );
 }

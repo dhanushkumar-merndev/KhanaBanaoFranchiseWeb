@@ -8,11 +8,12 @@ import {
 } from "@/lib/auth/session";
 import { AGREEMENT_DOCUMENT_VERSION, CLAUSE_BY_ID } from "@/lib/agreement/clauses";
 import { missingRequiredFields, pickKnownFields } from "@/lib/agreement/fields";
-import { renderFullDocument } from "@/lib/agreement/render";
+import {
+  agreementPdfAttachment,
+  generateAgreementPdf,
+} from "@/lib/agreement/pdf";
 import { loadAgreementDocument } from "@/lib/data/agreement-document";
 import { isAdmin } from "@/lib/domain/permissions";
-import { appUrl } from "@/lib/env";
-import { agreementUrl, createToken, hashToken } from "@/lib/tokens";
 import {
   AGREEMENT_STATUSES,
   LEAD_STATUSES,
@@ -25,10 +26,6 @@ import {
   createDirectUploadReceipt,
   readDirectUploadReceipt,
 } from "@/lib/direct-upload-receipt";
-import {
-  BROCHURE_ATTACHMENT,
-  storedFileAttachment,
-} from "@/lib/email/attachments";
 import { sendTemplateEmail } from "@/lib/email/send";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -438,9 +435,6 @@ export async function advanceAgreement(
   }
 
   if (sendEmail && target === "SENT") {
-    // Both routes to SENT — this one and sendAgreementDocument — go through
-    // the same delivery, so the AGREEMENT_SENT template can rely on
-    // {{application_link}} always being supplied.
     const delivery = await deliverAgreementEmail({
       agreementId,
       agreementNumber: agreement.agreement_number,
@@ -448,8 +442,6 @@ export async function advanceAgreement(
       leadNumber: lead.lead_number,
       toEmail: lead.email,
       toName: lead.full_name,
-      storagePath: agreement.storage_path,
-      fileName: agreement.file_name,
       actorId: profile.id,
     });
     if (!delivery.ok) return delivery;
@@ -494,15 +486,11 @@ export async function getAgreementUrl(
 }
 
 /**
- * Mint the applicant's link and send the agreement email.
+ * Generate and attach the applicant's personalised agreement PDF.
  *
- * Shared by both routes to SENT: advancing an uploaded agreement, and sending
- * the generated document. Whichever route was taken, the applicant gets a link
- * to the same page, plus the signed-copy PDF as an attachment where one has
- * been uploaded.
- *
- * Any earlier link for this agreement is revoked first — re-sending must not
- * leave a superseded set of terms reachable.
+ * There is deliberately no public agreement link. The email has one contract:
+ * the auto-filled, multi-page PDF attachment generated from the saved values
+ * and clause wording currently shown in the editor.
  */
 async function deliverAgreementEmail(args: {
   agreementId: string;
@@ -511,54 +499,33 @@ async function deliverAgreementEmail(args: {
   leadNumber: string;
   toEmail: string;
   toName: string;
-  storagePath?: string | null;
-  fileName?: string | null;
   actorId: string;
 }): Promise<
-  | { ok: true; url: string; emailSent: boolean }
+  | { ok: true; emailSent: boolean }
   | { ok: false; message: string }
 > {
   const supabase = createAdminClient();
 
-  // Create the replacement before revoking the old link. A transient database
-  // failure must not leave the applicant with no working agreement at all.
-  const token = createToken("AGREEMENT");
-  const { data: createdToken, error: tokenError } = await supabase
-    .from("application_tokens")
-    .insert({
-      lead_id: args.leadId,
-      agreement_id: args.agreementId,
-      token_hash: hashToken(token),
-      purpose: "AGREEMENT",
-      expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
-      created_by: args.actorId,
-    })
-    .select("id")
-    .single();
-
-  if (tokenError || !createdToken) {
+  const document = await loadAgreementDocument(args.agreementId);
+  if (!document) {
     return {
       ok: false,
-      message: tokenError?.message ?? "Could not create the applicant link.",
+      message: "That agreement no longer exists.",
     };
   }
 
-  await supabase
-    .from("application_tokens")
-    .update({ revoked_at: new Date().toISOString() })
-    .eq("agreement_id", args.agreementId)
-    .neq("id", createdToken.id)
-    .is("revoked_at", null);
-
-  const url = agreementUrl(appUrl, token);
-
-  const uploaded = args.storagePath
-    ? await storedFileAttachment(
-        STORAGE_BUCKETS.agreements,
-        args.storagePath,
-        args.fileName ?? `${args.agreementNumber}.pdf`,
-      )
-    : null;
+  let attachment;
+  try {
+    attachment = await agreementPdfAttachment(document);
+  } catch (cause) {
+    return {
+      ok: false,
+      message:
+        cause instanceof Error
+          ? `Could not create the agreement PDF: ${cause.message}`
+          : "Could not create the agreement PDF.",
+    };
+  }
 
   const delivery = await sendTemplateEmail({
     templateKey: "AGREEMENT_SENT",
@@ -567,24 +534,37 @@ async function deliverAgreementEmail(args: {
       applicant_name: args.toName,
       lead_number: args.leadNumber,
       agreement_number: args.agreementNumber,
-      application_link: url,
     },
-    // Preserve the brochure that the existing agreement email included while
-    // adding the private generated-document link.
-    attachments: [uploaded, BROCHURE_ATTACHMENT],
+    // Keep the no-link attachment flow correct even before migration 0014 is
+    // applied to an existing environment's editable template row.
+    override: {
+      subject: "Your KHANA BANAO franchise agreement {{agreement_number}}",
+      bodyHtml:
+        '<h2 style="margin:0 0 16px;font-family:Georgia,\'Times New Roman\',serif;font-size:21px;line-height:1.3;color:#8e1218;font-weight:700;">Your franchise agreement</h2><p>Hi {{applicant_name}},</p><p>Your personalised agreement <strong>{{agreement_number}}</strong> is attached to this email as a PDF. It has been filled in with the details supplied in your application.</p><p>Please download the attached agreement, read it carefully, sign it, and return the signed copy to us.</p><p>If anything is unclear, call us before you sign &mdash; we would be happy to talk it through.</p>',
+    },
+    attachments: [attachment],
     leadId: args.leadId,
     triggeredBy: args.actorId,
   });
 
-  await supabase
-    .from("agreements")
-    .update({
-      document_sent_at: new Date().toISOString(),
-      document_version: AGREEMENT_DOCUMENT_VERSION,
-    })
-    .eq("id", args.agreementId);
+  if (delivery.status === "FAILED") {
+    return {
+      ok: false,
+      message: delivery.error ?? "The agreement email could not be sent.",
+    };
+  }
 
-  return { ok: true, url, emailSent: delivery.status === "SENT" };
+  if (delivery.status === "SENT") {
+    await supabase
+      .from("agreements")
+      .update({
+        document_sent_at: new Date().toISOString(),
+        document_version: AGREEMENT_DOCUMENT_VERSION,
+      })
+      .eq("id", args.agreementId);
+  }
+
+  return { ok: true, emailSent: delivery.status === "SENT" };
 }
 
 // ===================================================================
@@ -774,14 +754,11 @@ export async function saveAgreementDocument(
 }
 
 /**
- * Mint the customer's link, email it, and move the agreement to SENT.
- *
- * Any previous link for this agreement is revoked first: re-sending must not
- * leave an older URL working, or a superseded set of terms stays reachable.
+ * Generate the customer's PDF, email it, and move the agreement to SENT.
  */
 export async function sendAgreementDocument(
   agreementId: string,
-): Promise<ActionResult<{ url: string; emailSent: boolean }>> {
+): Promise<ActionResult<{ emailSent: boolean }>> {
   const access = await agreementAccess(agreementId);
   if (!access.ok) return access;
 
@@ -820,7 +797,7 @@ export async function sendAgreementDocument(
   });
   if (!delivery.ok) return delivery;
 
-  const { url, emailSent } = delivery;
+  const { emailSent } = delivery;
 
   const { error: agreementError } = await supabase
     .from("agreements")
@@ -875,34 +852,35 @@ export async function sendAgreementDocument(
   });
 
   refresh(access.leadId);
-  return { ok: true, data: { url, emailSent } };
+  return { ok: true, data: { emailSent } };
 }
 
-/** Render the unsaved editor state, for the preview dialog. */
-export async function previewAgreementDocument(
+/** Download the saved draft/final document without creating a public link. */
+export async function downloadAgreementDocument(
   agreementId: string,
-  values: Record<string, string>,
-  overrides: Record<string, string>,
-): Promise<ActionResult<{ html: string; missing: string[] }>> {
+): Promise<ActionResult<{ fileName: string; content: string }>> {
   const access = await agreementAccess(agreementId);
   if (!access.ok) return access;
 
   const document = await loadAgreementDocument(agreementId);
   if (!document) return { ok: false, message: "That agreement no longer exists." };
 
-  // Preview what is on screen, not what was last saved.
-  const merged = { ...document.values, ...pickKnownFields(values) };
-
-  return {
-    ok: true,
-    data: {
-      html: renderFullDocument(merged, overrides, {
-        agreementNumber: document.agreementNumber,
-        version: document.version,
-        documentVersion: AGREEMENT_DOCUMENT_VERSION,
-        franchiseeName: merged.franchisee_name || document.franchiseeName,
-      }),
-      missing: missingRequiredFields(merged).map((field) => field.label),
-    },
-  };
+  try {
+    const pdf = await generateAgreementPdf(document);
+    return {
+      ok: true,
+      data: {
+        fileName: `${document.agreementNumber}.pdf`,
+        content: pdf.toString("base64"),
+      },
+    };
+  } catch (cause) {
+    return {
+      ok: false,
+      message:
+        cause instanceof Error
+          ? `Could not create the agreement PDF: ${cause.message}`
+          : "Could not create the agreement PDF.",
+    };
+  }
 }

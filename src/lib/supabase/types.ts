@@ -157,9 +157,7 @@ export type ApplicationTokenRow = {
   lead_id: string;
   application_id: string | null;
   token_hash: string;
-  purpose: "APPLICATION" | "DOCUMENTS" | "AGREEMENT";
-  /** Set only for AGREEMENT tokens — the generated document the link opens. */
-  agreement_id: string | null;
+  purpose: "APPLICATION" | "DOCUMENTS";
   expires_at: string;
   used_at: string | null;
   revoked_at: string | null;

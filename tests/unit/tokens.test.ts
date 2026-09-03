@@ -28,10 +28,6 @@ describe("secure applicant links", () => {
 
     const documentToken = createToken("DOCUMENTS");
     expect(verifyToken(documentToken, "APPLICATION")).toBe(false);
-
-    const agreementToken = createToken("AGREEMENT");
-    expect(verifyToken(agreementToken, "AGREEMENT")).toBe(true);
-    expect(verifyToken(agreementToken, "DOCUMENTS")).toBe(false);
   });
 
   it("rejects a tampered payload", () => {
