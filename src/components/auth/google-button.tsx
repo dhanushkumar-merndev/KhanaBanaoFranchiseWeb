@@ -30,7 +30,10 @@ export function GoogleButton({ next }: { next?: string }) {
         provider: "google",
         options: {
           redirectTo: callback.toString(),
-          queryParams: { access_type: "offline", prompt: "consent" },
+          // No `access_type: offline`: nothing here calls Google APIs on the
+          // user's behalf, and the returned provider refresh token would be
+          // stored in the session cookie, bloating it towards the header limit.
+          queryParams: { prompt: "select_account" },
         },
       });
 
