@@ -1,3 +1,5 @@
+import { Download } from "lucide-react";
+
 import { Leaf } from "@/components/decor/leaf";
 import { Icon } from "@/components/landing/icons";
 import { SectionHeading } from "@/components/landing/section-heading";
@@ -50,9 +52,29 @@ export function EligibilityInvestment() {
           {/* Investment overview */}
           <Reveal variant="right" delay={140}>
             <div className="h-full rounded-2xl border border-line bg-surface-muted p-6 shadow-[0_20px_46px_-34px_rgba(110,40,20,0.5)] sm:p-8">
-              <h3 className="font-display text-lg font-bold uppercase tracking-[0.1em] text-ink">
-                Investment Overview
-              </h3>
+              <div className="flex items-start justify-between gap-4">
+                <h3 className="font-display text-lg font-bold uppercase tracking-[0.1em] text-ink">
+                  Investment Overview
+                </h3>
+                {/* Full franchise brochure — served straight from /public. */}
+                <a
+                  href="/Khana-banao-Franchise-Master.pdf"
+                  download="Khana-Banao-Franchise-Master.pdf"
+                  aria-label="Download the franchise brochure (PDF)"
+                  className="group relative grid size-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-brand-red to-brand-crimson text-white shadow-[0_10px_22px_-12px_rgba(193,39,45,0.95)] transition hover:-translate-y-0.5 hover:from-brand-crimson hover:to-brand-maroon"
+                >
+                  <Download className="size-[1.15rem]" />
+                  {/* Desktop-only hover tooltip, right-anchored so it stays
+                      inside the card instead of running off the viewport. */}
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute right-0 top-[calc(100%+0.6rem)] z-20 hidden whitespace-nowrap rounded-lg bg-ink px-3 py-1.5 text-[0.75rem] font-medium text-white opacity-0 shadow-[0_10px_24px_-14px_rgba(0,0,0,0.8)] transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100 md:block"
+                  >
+                    <span className="absolute -top-1 right-3.5 size-2 rotate-45 rounded-[2px] bg-ink" />
+                    Download brochure
+                  </span>
+                </a>
+              </div>
               <p className="mt-2 text-[0.92rem] leading-relaxed text-ink-soft">
                 Choose a franchise tier that matches your event ambition. Setup,
                 premises, licences and operating costs are discussed separately.

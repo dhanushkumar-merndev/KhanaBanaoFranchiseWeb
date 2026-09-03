@@ -3,7 +3,7 @@
 # `project_id` is the remote project ref, so `supabase db push` targets the
 # right project without passing --project-ref every time. It is not a secret:
 # it is already visible in NEXT_PUBLIC_SUPABASE_URL.
-project_id = "bavjzxmcjuoyiuhjwbtn"
+project_id = "wbdfzzvtmmufocanjxja"
 
 [db]
 # Match the remote so a local `supabase start` behaves the same way.
