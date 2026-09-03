@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Copy, ExternalLink, FileText, Pencil, Send, XCircle } from "lucide-react";
+import {
+  Copy,
+  ExternalLink,
+  FileText,
+  Pencil,
+  Send,
+  Upload,
+  XCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   rejectApplication,
@@ -12,20 +20,31 @@ import {
 import {
   getApprovalLetterUrl,
   resendApprovalEmail,
+  uploadApprovalLetter,
 } from "@/app/actions/franchises";
 import { Badge, StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmailConfirmDialog } from "@/components/ui/email-confirm-dialog";
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/feedback";
-import { Field, Textarea } from "@/components/ui/field";
+import { Field, Input, Textarea } from "@/components/ui/field";
 import { ApplicationEditDialog } from "@/components/leads/application-edit-dialog";
 import { formatDateTime } from "@/lib/format";
 import { formatCurrency } from "@/lib/utils";
 import type { ApplicationDetail } from "@/lib/data/pipeline";
 import type { LeadStatus } from "@/lib/domain/enums";
 import type { StatusTone } from "@/lib/domain/status";
+import { MAX_DOCUMENT_UPLOAD_MB } from "@/lib/upload-limits";
 
 const STATUS_LABEL = {
   IN_PROGRESS: "Not submitted yet",
@@ -292,10 +311,11 @@ export function ApplicationTab({
                 {application.approval_notes}
               </p>
             )}
-            {application.hasApprovalLetter && (
+            {(application.hasApprovalLetter || isAdmin) && (
               <ApprovalLetterActions
                 applicationId={application.id}
-                canResend={isAdmin}
+                hasLetter={application.hasApprovalLetter}
+                canManage={isAdmin}
               />
             )}
           </CardContent>
@@ -439,14 +459,17 @@ function Detail({ label, value }: { label: string; value: string | null }) {
 
 function ApprovalLetterActions({
   applicationId,
-  canResend,
+  hasLetter,
+  canManage,
 }: {
   applicationId: string;
-  canResend: boolean;
+  hasLetter: boolean;
+  canManage: boolean;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [resendOpen, setResendOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
 
   const open = async () => {
     setPending(true);
@@ -460,12 +483,31 @@ function ApprovalLetterActions({
   };
 
   return (
-    <div className="mt-3 flex flex-wrap gap-2">
-      <Button size="sm" variant="outline" loading={pending} onClick={() => void open()}>
-        <ExternalLink />
-        View approval letter
-      </Button>
-      {canResend && (
+    <div className="mt-3">
+      <p className="mb-2 text-[0.75rem] text-ink-soft">
+        {hasLetter
+          ? "Approval letter PDF is stored with this application."
+          : "No approval letter PDF has been uploaded yet."}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {hasLetter && (
+          <Button
+            size="sm"
+            variant="outline"
+            loading={pending}
+            onClick={() => void open()}
+          >
+            <ExternalLink />
+            View approval letter
+          </Button>
+        )}
+        {canManage && (
+          <Button size="sm" variant="outline" onClick={() => setUploadOpen(true)}>
+            <Upload />
+            {hasLetter ? "Replace approval letter" : "Upload approval letter"}
+          </Button>
+        )}
+        {canManage && hasLetter && (
         <>
           <Button size="sm" variant="secondary" onClick={() => setResendOpen(true)}>
             <Send />
@@ -485,8 +527,142 @@ function ApprovalLetterActions({
             }}
           />
         </>
+        )}
+      </div>
+      {canManage && (
+        <ApprovalLetterUploadDialog
+          open={uploadOpen}
+          onOpenChange={setUploadOpen}
+          applicationId={applicationId}
+          replacing={hasLetter}
+        />
       )}
     </div>
+  );
+}
+
+function ApprovalLetterUploadDialog({
+  open,
+  onOpenChange,
+  applicationId,
+  replacing,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  applicationId: string;
+  replacing: boolean;
+}) {
+  const router = useRouter();
+  const [file, setFile] = useState<File | null>(null);
+  const [error, setError] = useState<string>();
+  const [pending, setPending] = useState<"save" | "email" | null>(null);
+  const busy = pending !== null;
+
+  const close = (next: boolean) => {
+    if (busy) return;
+    onOpenChange(next);
+    if (!next) {
+      setFile(null);
+      setError(undefined);
+    }
+  };
+
+  const submit = async (sendEmail: boolean) => {
+    if (!file) {
+      setError("Choose the approval letter PDF");
+      return;
+    }
+
+    setPending(sendEmail ? "email" : "save");
+    setError(undefined);
+    try {
+      const formData = new FormData();
+      formData.set("letter", file);
+      const result = await uploadApprovalLetter(
+        applicationId,
+        formData,
+        sendEmail,
+      );
+      router.refresh();
+      if (!result.ok) {
+        setError(result.fieldErrors?.letter);
+        toast.error(result.message);
+        return;
+      }
+      toast.success(
+        sendEmail
+          ? "Approval letter saved and emailed."
+          : "Approval letter saved.",
+      );
+      onOpenChange(false);
+      setFile(null);
+      setError(undefined);
+    } finally {
+      setPending(null);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={close}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>
+            {replacing ? "Replace approval letter" : "Upload approval letter"}
+          </DialogTitle>
+          <DialogDescription>
+            The PDF is stored with this application. You can save it only or
+            email it to the applicant immediately.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          <Field
+            label="Approval letter PDF"
+            htmlFor="approved-application-letter"
+            required
+            error={error}
+            hint={`PDF up to ${MAX_DOCUMENT_UPLOAD_MB} MB.`}
+          >
+            <Input
+              id="approved-application-letter"
+              type="file"
+              accept="application/pdf"
+              onChange={(event) => {
+                setFile(event.target.files?.[0] ?? null);
+                setError(undefined);
+              }}
+              className="h-auto py-2 file:mr-3 file:rounded-md file:border-0 file:bg-surface-muted file:px-3 file:py-1.5 file:text-[0.78rem] file:font-medium file:text-ink"
+            />
+          </Field>
+        </DialogBody>
+        <DialogFooter className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy}
+            onClick={() => close(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            loading={pending === "save"}
+            disabled={busy}
+            onClick={() => void submit(false)}
+          >
+            Save only
+          </Button>
+          <Button
+            type="button"
+            loading={pending === "email"}
+            disabled={busy}
+            onClick={() => void submit(true)}
+          >
+            Save &amp; email PDF
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

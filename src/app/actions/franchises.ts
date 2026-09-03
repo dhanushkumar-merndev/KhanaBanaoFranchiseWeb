@@ -22,6 +22,7 @@ import {
   checkUpload,
   MAX_AGREEMENT_BYTES,
   ALLOWED_AGREEMENT_TYPES,
+  removeFile,
   signedUrlFor,
   uploadFile,
 } from "@/lib/storage";
@@ -423,6 +424,141 @@ export async function resendApprovalEmail(
   });
 
   refresh(application.lead_id);
+  return { ok: true };
+}
+
+/** Add or replace the letter after approval, optionally emailing it immediately. */
+export async function uploadApprovalLetter(
+  applicationId: string,
+  formData: FormData,
+  sendEmail: boolean,
+): Promise<ActionResult> {
+  const profile = await requireAdmin();
+  const supabase = createAdminClient();
+  const letter = formData.get("letter");
+
+  if (!(letter instanceof File) || letter.size === 0) {
+    return {
+      ok: false,
+      message: "Choose the approval letter PDF.",
+      fieldErrors: { letter: "Choose the approval letter PDF" },
+    };
+  }
+
+  const check = checkUpload(letter, {
+    maxBytes: MAX_AGREEMENT_BYTES,
+    allowed: ALLOWED_AGREEMENT_TYPES,
+  });
+  if (!check.ok) {
+    return {
+      ok: false,
+      message: check.message,
+      fieldErrors: { letter: check.message },
+    };
+  }
+
+  const { data: application } = await supabase
+    .from("applications")
+    .select(
+      "id, lead_id, application_number, status, approved_territory, approval_letter_path",
+    )
+    .eq("id", applicationId)
+    .maybeSingle();
+
+  if (!application) {
+    return { ok: false, message: "That application no longer exists." };
+  }
+  if (application.status !== "APPROVED") {
+    return {
+      ok: false,
+      message: "Approve the application before adding its approval letter.",
+    };
+  }
+
+  const newPath = approvalLetterPath(application.id, letter.name);
+  const uploaded = await uploadFile(
+    STORAGE_BUCKETS.approvalLetters,
+    newPath,
+    letter,
+  );
+  if (!uploaded.ok) return uploaded;
+
+  const { error: updateError } = await supabase
+    .from("applications")
+    .update({ approval_letter_path: newPath })
+    .eq("id", application.id);
+
+  if (updateError) {
+    await removeFile(STORAGE_BUCKETS.approvalLetters, newPath);
+    return { ok: false, message: updateError.message };
+  }
+
+  if (
+    application.approval_letter_path &&
+    application.approval_letter_path !== newPath
+  ) {
+    await removeFile(
+      STORAGE_BUCKETS.approvalLetters,
+      application.approval_letter_path,
+    );
+  }
+
+  let emailFailure: string | null = null;
+  if (sendEmail) {
+    const { data: lead } = await supabase
+      .from("leads")
+      .select("lead_number, full_name, email")
+      .eq("id", application.lead_id)
+      .maybeSingle();
+
+    if (!lead) {
+      emailFailure = "The related lead no longer exists.";
+    } else {
+      const attachment: EmailAttachment = {
+        name:
+          letter.name || `${application.application_number}-approval-letter.pdf`,
+        content: Buffer.from(await letter.arrayBuffer()).toString("base64"),
+      };
+      const result = await sendTemplateEmail({
+        templateKey: "APPLICATION_APPROVED",
+        to: { email: lead.email, name: lead.full_name },
+        vars: {
+          applicant_name: lead.full_name,
+          lead_number: lead.lead_number,
+          application_number: application.application_number,
+          territory: application.approved_territory ?? "the approved territory",
+        },
+        override: APPROVAL_EMAIL,
+        attachments: [attachment],
+        leadId: application.lead_id,
+        triggeredBy: profile.id,
+      });
+      if (result.status !== "SENT") {
+        emailFailure =
+          result.error ?? "The email provider did not accept the message.";
+      }
+    }
+  }
+
+  await supabase.from("activity_logs").insert({
+    actor_id: profile.id,
+    entity_type: "application",
+    entity_id: application.id,
+    action: application.approval_letter_path
+      ? "APPROVAL_LETTER_REPLACED"
+      : "APPROVAL_LETTER_UPLOADED",
+    summary: `${application.application_number} approval letter ${
+      application.approval_letter_path ? "replaced" : "uploaded"
+    }${sendEmail && !emailFailure ? " and emailed" : ""}.`,
+  });
+
+  refresh(application.lead_id);
+  if (emailFailure) {
+    return {
+      ok: false,
+      message: `The letter was saved, but the email was not sent: ${emailFailure}`,
+    };
+  }
   return { ok: true };
 }
 
