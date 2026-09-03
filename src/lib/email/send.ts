@@ -3,6 +3,8 @@ import "server-only";
 import { brevoApiKey, brevoSender, isBrevoConfigured } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { EmailTemplateKey } from "@/lib/domain/enums";
+import type { EmailAttachment } from "./attachments";
+import { wrapEmailHtml } from "./layout";
 import { htmlToText, renderTemplate, type TemplateVars } from "./render";
 
 const BREVO_ENDPOINT = "https://api.brevo.com/v3/smtp/email";
@@ -24,6 +26,8 @@ type SendArgs = {
   override?: { subject: string; bodyHtml: string };
   /** Sends normally, but never persists a readable body preview. */
   sensitive?: boolean;
+  /** Files to attach. Nulls are dropped, so callers can pass a best-effort list. */
+  attachments?: readonly (EmailAttachment | null)[];
 };
 
 /**
@@ -73,6 +77,10 @@ export async function sendTemplateEmail(args: SendArgs): Promise<SendResult> {
 
   const renderedSubject = renderTemplate(subject, args.vars);
   const renderedBody = renderTemplate(bodyHtml, args.vars);
+  const plainBody = htmlToText(renderedBody);
+  const wrappedBody = wrapEmailHtml(renderedBody, {
+    preheader: previewLine(plainBody),
+  });
 
   if (!isBrevoConfigured) {
     // Dev convenience: record what *would* have gone out instead of failing.
@@ -83,6 +91,10 @@ export async function sendTemplateEmail(args: SendArgs): Promise<SendResult> {
       renderedBody,
     );
   }
+
+  const attachments = (args.attachments ?? []).filter(
+    (item): item is EmailAttachment => item !== null,
+  );
 
   try {
     const sender = brevoSender();
@@ -97,8 +109,9 @@ export async function sendTemplateEmail(args: SendArgs): Promise<SendResult> {
         sender,
         to: [{ email: args.to.email, name: args.to.name }],
         subject: renderedSubject,
-        htmlContent: renderedBody,
-        textContent: htmlToText(renderedBody),
+        htmlContent: wrappedBody,
+        textContent: plainBody,
+        ...(attachments.length > 0 ? { attachment: attachments } : {}),
       }),
     });
 
@@ -137,6 +150,17 @@ export async function sendTemplateEmail(args: SendArgs): Promise<SendResult> {
       renderedBody,
     );
   }
+}
+
+/**
+ * The grey line Gmail shows beside the subject in the inbox list.
+ *
+ * Skips the greeting — "Hi Priya," beside every subject tells the reader
+ * nothing, so the first real sentence of the message goes there instead.
+ */
+function previewLine(text: string): string {
+  const withoutGreeting = text.replace(/^(hi|hello|dear)\b[^\n]{0,60}?,\s*/i, "");
+  return withoutGreeting.replace(/\s+/g, " ").trim().slice(0, 140);
 }
 
 async function logAndReturn(

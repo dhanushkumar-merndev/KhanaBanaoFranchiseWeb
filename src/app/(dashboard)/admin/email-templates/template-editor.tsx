@@ -242,9 +242,17 @@ export function TemplateEditor({ template }: { template: TemplateRow }) {
               <p className="text-[0.85rem] font-semibold text-ink">
                 {preview.subject}
               </p>
-              <div
-                className="rounded-xl border border-line bg-surface-muted/40 px-4 py-3 text-[0.82rem] leading-relaxed text-ink [&_a]:text-brand-crimson [&_a]:underline"
-                dangerouslySetInnerHTML={{ __html: preview.body }}
+              {/*
+                Rendered in a sandboxed frame rather than injected into the
+                page: it shows the real branded document (logo, header, footer)
+                at its own widths, and admin-authored HTML cannot reach the
+                dashboard's DOM or scripts.
+              */}
+              <iframe
+                title="Email preview"
+                srcDoc={preview.body}
+                sandbox=""
+                className="h-[26rem] w-full rounded-xl border border-line bg-white"
               />
             </DialogBody>
             <DialogFooter>
@@ -275,10 +283,11 @@ export function TemplateEditor({ template }: { template: TemplateRow }) {
         onConfirm={async () => {
           const result = await resetEmailTemplate(template.id);
           if (result.ok) {
+            // Seeded at mount, so a refresh alone would leave the edited text
+            // on screen — take the restored wording from the action instead.
+            setSubject(result.data.subject);
+            setBody(result.data.bodyHtml);
             router.refresh();
-            // Local state would otherwise keep showing the edited text.
-            setSubject("");
-            setBody("");
           }
           return result;
         }}

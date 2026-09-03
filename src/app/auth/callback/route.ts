@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { googlePictureOf } from "@/lib/auth/session";
 import { normalizeEmail } from "@/lib/domain/normalize";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -31,10 +32,16 @@ export async function GET(request: NextRequest) {
   const email = normalizeEmail(data.user.email);
   const admin = createAdminClient();
 
+  // Google's photo only exists on the auth user, which is readable for the
+  // signed-in session alone. Copying it onto the profile on every sign-in is
+  // what lets admins see a member's face in the members table, and keeps it
+  // current when someone changes their Google picture.
+  const avatarUrl = googlePictureOf(data.user.user_metadata);
+
   // 1. Already-linked profile.
   const { data: linked } = await admin
     .from("profiles")
-    .select("id, role, status")
+    .select("id, role, status, avatar_url")
     .eq("auth_user_id", authUserId)
     .maybeSingle();
 
@@ -42,6 +49,12 @@ export async function GET(request: NextRequest) {
     if (linked.status !== "ACTIVE") {
       await supabase.auth.signOut();
       return NextResponse.redirect(`${origin}/unauthorized?reason=inactive`);
+    }
+    if (avatarUrl && avatarUrl !== linked.avatar_url) {
+      await admin
+        .from("profiles")
+        .update({ avatar_url: avatarUrl })
+        .eq("id", linked.id);
     }
     return NextResponse.redirect(
       `${origin}${next ?? defaultHome(linked.role)}`,
@@ -68,7 +81,7 @@ export async function GET(request: NextRequest) {
 
     await admin
       .from("profiles")
-      .update({ auth_user_id: authUserId })
+      .update({ auth_user_id: authUserId, avatar_url: avatarUrl })
       .eq("id", byEmail.id);
 
     return NextResponse.redirect(
@@ -107,6 +120,7 @@ export async function GET(request: NextRequest) {
       full_name: invitation.full_name,
       email,
       phone: invitation.phone,
+      avatar_url: avatarUrl,
       role: "MEMBER",
       status: "ACTIVE",
       created_by: invitation.invited_by,

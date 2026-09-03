@@ -44,6 +44,8 @@ export type ProfileRow = Timestamps & {
   full_name: string;
   email: string;
   phone: string | null;
+  /** Google profile photo, refreshed on every sign-in. */
+  avatar_url: string | null;
   role: Role;
   status: ProfileStatus;
   created_by: string | null;

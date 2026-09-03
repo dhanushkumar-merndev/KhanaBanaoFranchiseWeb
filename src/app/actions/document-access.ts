@@ -115,11 +115,6 @@ export async function requestDocumentAccessOtp(
     },
     leadId: resolved.data.leadId,
     sensitive: true,
-    override: {
-      subject: "Your Khana Banao document verification code",
-      bodyHtml:
-        '<p>Hi {{applicant_name}},</p><p>Your verification code for the secure document-upload page is:</p><p style="font-size:28px;font-weight:700;letter-spacing:6px">{{verification_code}}</p><p>This code expires in 10 minutes. Do not share it with anyone.</p><p>Reference: {{lead_number}}</p>',
-    },
   });
 
   if (delivery.status !== "SENT") {

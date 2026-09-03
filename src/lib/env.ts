@@ -18,6 +18,17 @@ function required(name: string, value: string | undefined): string {
 export const appUrl =
   process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "http://localhost:3000";
 
+/**
+ * Absolute origin for images embedded in outgoing email.
+ *
+ * Mail clients fetch these long after the send, from outside our network, so a
+ * localhost `appUrl` would render a broken logo in every dev-sent email. Fall
+ * back to the public site in that case.
+ */
+export const emailAssetBaseUrl = appUrl.startsWith("http://localhost")
+  ? "https://www.khanabanaopartner.com"
+  : appUrl;
+
 export function supabaseUrl() {
   return required("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
 }

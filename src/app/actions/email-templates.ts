@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth/session";
+import { wrapEmailHtml } from "@/lib/email/layout";
 import { renderTemplate, missingVariables, type TemplateVars } from "@/lib/email/render";
 import { sendTemplateEmail } from "@/lib/email/send";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -25,6 +26,7 @@ const SAMPLE: TemplateVars = {
   training_date: "12 Aug 2026",
   support_name: "Priya Menon",
   support_phone: "+91 94227 99299",
+  verification_code: "418302",
 };
 
 export async function updateEmailTemplate(
@@ -105,7 +107,7 @@ export async function setTemplateActive(
  */
 export async function resetEmailTemplate(
   templateId: string,
-): Promise<ActionResult> {
+): Promise<ActionResult<{ subject: string; bodyHtml: string }>> {
   const profile = await requireAdmin();
   const supabase = createAdminClient();
 
@@ -137,7 +139,15 @@ export async function resetEmailTemplate(
   });
 
   revalidatePath("/admin/email-templates");
-  return { ok: true };
+  // Returned so the editor can show the restored wording immediately — its
+  // textarea state was seeded at mount and a refresh alone will not replace it.
+  return {
+    ok: true,
+    data: {
+      subject: template.default_subject,
+      bodyHtml: template.default_body,
+    },
+  };
 }
 
 /** Renders unsaved text with sample values, for the preview pane. */
@@ -153,7 +163,9 @@ export async function previewEmailTemplate(
     ok: true,
     data: {
       subject: renderTemplate(subject, SAMPLE),
-      body: renderTemplate(bodyHtml, SAMPLE),
+      // The full branded document, so the preview shows what actually lands in
+      // the inbox — logo, header band and footer included.
+      body: wrapEmailHtml(renderTemplate(bodyHtml, SAMPLE)),
       // Placeholders with no sample value are almost always typos.
       missing: missingVariables(`${subject} ${bodyHtml}`, SAMPLE),
     },

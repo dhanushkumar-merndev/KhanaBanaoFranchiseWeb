@@ -22,9 +22,10 @@ export type MemberRowData = {
   created_at: string;
   assignedLeads: number;
   acceptedLeads: number;
+  /** Google profile photo, or null until they have signed in once. */
+  avatar_url: string | null;
   /** The signed-in admin cannot deactivate their own account. */
   isSelf: boolean;
-  avatar_url?: string | null;
 };
 
 type PendingChange = { row: MemberRowData; next: "ACTIVE" | "INACTIVE" };

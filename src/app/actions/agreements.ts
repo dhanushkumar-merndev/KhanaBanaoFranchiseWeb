@@ -14,6 +14,10 @@ import {
   createDirectUploadReceipt,
   readDirectUploadReceipt,
 } from "@/lib/direct-upload-receipt";
+import {
+  BROCHURE_ATTACHMENT,
+  storedFileAttachment,
+} from "@/lib/email/attachments";
 import { sendTemplateEmail } from "@/lib/email/send";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -323,7 +327,7 @@ export async function advanceAgreement(
 
   const { data: agreement } = await supabase
     .from("agreements")
-    .select("id, lead_id, agreement_number, status, storage_path")
+    .select("id, lead_id, agreement_number, status, storage_path, file_name")
     .eq("id", agreementId)
     .maybeSingle();
 
@@ -423,6 +427,18 @@ export async function advanceAgreement(
   }
 
   if (sendEmail && target === "SENT") {
+    // The agreement travels with the email rather than behind a signed link:
+    // applicants forward it to a spouse or a lawyer, and a link that expires
+    // in ten minutes does not survive that. The brochure rides along so the
+    // commercial terms are in the same thread as the paperwork.
+    const agreementFile = agreement.storage_path
+      ? await storedFileAttachment(
+          STORAGE_BUCKETS.agreements,
+          agreement.storage_path,
+          agreement.file_name ?? `${agreement.agreement_number}.pdf`,
+        )
+      : null;
+
     await sendTemplateEmail({
       templateKey: "AGREEMENT_SENT",
       to: { email: lead.email, name: lead.full_name },
@@ -431,6 +447,7 @@ export async function advanceAgreement(
         lead_number: lead.lead_number,
         agreement_number: agreement.agreement_number,
       },
+      attachments: [agreementFile, BROCHURE_ATTACHMENT],
       leadId: lead.id,
       triggeredBy: profile.id,
     });

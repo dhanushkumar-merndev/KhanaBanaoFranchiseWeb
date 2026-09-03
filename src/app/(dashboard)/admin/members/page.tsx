@@ -99,7 +99,6 @@ async function MembersSection({
       rows={rows.map((member) => ({
         ...member,
         isSelf: member.id === currentProfile.id,
-        avatar_url: member.id === currentProfile.id ? currentProfile.avatar_url : null,
       }))}
       total={total}
       page={params.page}
