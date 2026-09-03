@@ -2,15 +2,20 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Download, ExternalLink, FileSignature, Upload } from "lucide-react";
+import { Download, ExternalLink, FileSignature, Upload, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   advanceAgreement,
+  startAgreementDocument,
   discardAgreementUpload,
   getAgreementUrl,
   prepareAgreementUpload,
   uploadAgreement,
 } from "@/app/actions/agreements";
+import {
+  AgreementDocumentEditor,
+  type AgreementDocumentState,
+} from "@/components/leads/agreement-document-editor";
 import { StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,23 +60,31 @@ export function AgreementTab({
   leadId,
   leadStatus,
   agreement,
+  agreementDocument,
   isAdmin,
+  isAssignedMember,
 }: {
   leadId: string;
   leadStatus: LeadStatus;
   agreement: AgreementDetail | null;
+  agreementDocument: AgreementDocumentState | null;
   isAdmin: boolean;
+  /** The member this lead is assigned to may prepare and send its agreement. */
+  isAssignedMember: boolean;
 }) {
   const [advanceOpen, setAdvanceOpen] = useState(false);
   const [note, setNote] = useState("");
   const [opening, setOpening] = useState<"view" | "download" | null>(null);
 
   const target = agreement ? nextStatus(agreement.status) : null;
-  const canManageAgreement =
-    isAdmin &&
+  const stageOpen =
     leadStatus !== "REJECTED" &&
     LEAD_STATUSES.indexOf(leadStatus) >=
       LEAD_STATUSES.indexOf("FRANCHISE_APPROVED");
+  const canManageAgreement = isAdmin && stageOpen;
+  // Preparing and sending the generated document is open to the assigned
+  // member; the signed-copy upload and the status sequence stay with admins.
+  const canPrepareDocument = (isAdmin || isAssignedMember) && stageOpen;
 
   const openFile = async (download: boolean) => {
     if (!agreement) return;
@@ -90,13 +103,18 @@ export function AgreementTab({
       <EmptyState
         title="No agreement yet"
         body={
-          canManageAgreement
-            ? "Upload the franchise agreement PDF to start the signing sequence."
+          canPrepareDocument
+            ? "Prepare the agreement from this applicant's own answers, or upload a signed PDF you already have."
             : "The agreement opens after document review and franchise approval."
         }
         icon={FileSignature}
         action={
-          canManageAgreement ? <UploadAgreementButton leadId={leadId} /> : undefined
+          canPrepareDocument ? (
+            <div className="flex flex-wrap justify-center gap-2">
+              <PrepareAgreementButton leadId={leadId} />
+              {canManageAgreement && <UploadAgreementButton leadId={leadId} />}
+            </div>
+          ) : undefined
         }
       />
     );
@@ -104,6 +122,10 @@ export function AgreementTab({
 
   return (
     <div className="space-y-4">
+      {canPrepareDocument && agreementDocument && (
+        <AgreementDocumentEditor state={agreementDocument} />
+      )}
+
       <Card>
         <CardHeader className="flex-row items-start justify-between gap-3">
           <div>
@@ -396,5 +418,39 @@ function UploadAgreementButton({
         </ConfirmDialog>
       )}
     </>
+  );
+}
+
+
+/**
+ * Creates the agreement record so there is somewhere to hold the field values.
+ * Before this existed an agreement only came into being on PDF upload.
+ */
+function PrepareAgreementButton({ leadId }: { leadId: string }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+
+  return (
+    <Button
+      size="sm"
+      loading={busy}
+      onClick={async () => {
+        setBusy(true);
+        try {
+          const result = await startAgreementDocument(leadId);
+          if (result.ok) {
+            toast.success("Agreement prepared from the application.");
+            router.refresh();
+          } else {
+            toast.error(result.message);
+          }
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      <Wand2 />
+      Prepare agreement
+    </Button>
   );
 }

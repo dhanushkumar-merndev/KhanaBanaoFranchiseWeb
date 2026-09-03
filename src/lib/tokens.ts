@@ -15,8 +15,14 @@ import { applicationTokenSecret, documentTokenSecret } from "@/lib/env";
  * A leaked database backup therefore does not hand over working links.
  */
 
-export type TokenPurpose = "APPLICATION" | "DOCUMENTS";
+export type TokenPurpose = "APPLICATION" | "DOCUMENTS" | "AGREEMENT";
 
+/**
+ * AGREEMENT shares the document secret rather than adding a third env var.
+ * That is safe because the purpose is folded into the signed payload below,
+ * so a documents link can never be replayed as an agreement link even though
+ * both are signed with the same key.
+ */
 function secretFor(purpose: TokenPurpose): string {
   return purpose === "APPLICATION"
     ? applicationTokenSecret()
@@ -61,4 +67,8 @@ export function applicationUrl(appUrl: string, token: string): string {
 
 export function documentsUrl(appUrl: string, token: string): string {
   return `${appUrl}/franchise/documents/${token}`;
+}
+
+export function agreementUrl(appUrl: string, token: string): string {
+  return `${appUrl}/franchise/agreement/${token}`;
 }

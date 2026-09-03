@@ -1,5 +1,9 @@
 import "server-only";
 
+import {
+  loadAgreementDocument,
+  type AgreementDocument,
+} from "@/lib/data/agreement-document";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveMemberNames } from "./leads";
 import type {
@@ -152,6 +156,8 @@ export type LeadPipeline = {
   application: ApplicationDetail | null;
   documents: DocumentRow[];
   agreement: AgreementDetail | null;
+  /** Fill-in values for the generated agreement, autofilled from the application. */
+  agreementDocument: AgreementDocument | null;
   payments: PaymentDetail[];
   franchise: FranchiseDetail | null;
   emails: EmailLogRow[];
@@ -204,6 +210,9 @@ export async function getLeadPipeline(leadId: string): Promise<LeadPipeline> {
   ]);
 
   const documents = application ? await loadDocuments(application.id) : [];
+  const agreementDocument = agreement
+    ? await loadAgreementDocument(agreement.id)
+    : null;
 
   const training = franchise
     ? ((
@@ -261,6 +270,7 @@ export async function getLeadPipeline(leadId: string): Promise<LeadPipeline> {
         }
       : null,
     documents,
+    agreementDocument,
     agreement: agreement
       ? {
           id: agreement.id,

@@ -1,7 +1,18 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/auth/session";
+import {
+  requireAdmin,
+  requireProfile,
+  type SessionProfile,
+} from "@/lib/auth/session";
+import { AGREEMENT_DOCUMENT_VERSION, CLAUSE_BY_ID } from "@/lib/agreement/clauses";
+import { missingRequiredFields, pickKnownFields } from "@/lib/agreement/fields";
+import { renderFullDocument } from "@/lib/agreement/render";
+import { loadAgreementDocument } from "@/lib/data/agreement-document";
+import { isAdmin } from "@/lib/domain/permissions";
+import { appUrl } from "@/lib/env";
+import { agreementUrl, createToken, hashToken } from "@/lib/tokens";
 import {
   AGREEMENT_STATUSES,
   LEAD_STATUSES,
@@ -427,30 +438,21 @@ export async function advanceAgreement(
   }
 
   if (sendEmail && target === "SENT") {
-    // The agreement travels with the email rather than behind a signed link:
-    // applicants forward it to a spouse or a lawyer, and a link that expires
-    // in ten minutes does not survive that. The brochure rides along so the
-    // commercial terms are in the same thread as the paperwork.
-    const agreementFile = agreement.storage_path
-      ? await storedFileAttachment(
-          STORAGE_BUCKETS.agreements,
-          agreement.storage_path,
-          agreement.file_name ?? `${agreement.agreement_number}.pdf`,
-        )
-      : null;
-
-    await sendTemplateEmail({
-      templateKey: "AGREEMENT_SENT",
-      to: { email: lead.email, name: lead.full_name },
-      vars: {
-        applicant_name: lead.full_name,
-        lead_number: lead.lead_number,
-        agreement_number: agreement.agreement_number,
-      },
-      attachments: [agreementFile, BROCHURE_ATTACHMENT],
+    // Both routes to SENT — this one and sendAgreementDocument — go through
+    // the same delivery, so the AGREEMENT_SENT template can rely on
+    // {{application_link}} always being supplied.
+    const delivery = await deliverAgreementEmail({
+      agreementId,
+      agreementNumber: agreement.agreement_number,
       leadId: lead.id,
-      triggeredBy: profile.id,
+      leadNumber: lead.lead_number,
+      toEmail: lead.email,
+      toName: lead.full_name,
+      storagePath: agreement.storage_path,
+      fileName: agreement.file_name,
+      actorId: profile.id,
     });
+    if (!delivery.ok) return delivery;
   }
 
   await supabase.from("activity_logs").insert({
@@ -489,4 +491,418 @@ export async function getAgreementUrl(
   return url
     ? { ok: true, data: { url } }
     : { ok: false, message: "Could not open that file." };
+}
+
+/**
+ * Mint the applicant's link and send the agreement email.
+ *
+ * Shared by both routes to SENT: advancing an uploaded agreement, and sending
+ * the generated document. Whichever route was taken, the applicant gets a link
+ * to the same page, plus the signed-copy PDF as an attachment where one has
+ * been uploaded.
+ *
+ * Any earlier link for this agreement is revoked first — re-sending must not
+ * leave a superseded set of terms reachable.
+ */
+async function deliverAgreementEmail(args: {
+  agreementId: string;
+  agreementNumber: string;
+  leadId: string;
+  leadNumber: string;
+  toEmail: string;
+  toName: string;
+  storagePath?: string | null;
+  fileName?: string | null;
+  actorId: string;
+}): Promise<
+  | { ok: true; url: string; emailSent: boolean }
+  | { ok: false; message: string }
+> {
+  const supabase = createAdminClient();
+
+  // Create the replacement before revoking the old link. A transient database
+  // failure must not leave the applicant with no working agreement at all.
+  const token = createToken("AGREEMENT");
+  const { data: createdToken, error: tokenError } = await supabase
+    .from("application_tokens")
+    .insert({
+      lead_id: args.leadId,
+      agreement_id: args.agreementId,
+      token_hash: hashToken(token),
+      purpose: "AGREEMENT",
+      expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+      created_by: args.actorId,
+    })
+    .select("id")
+    .single();
+
+  if (tokenError || !createdToken) {
+    return {
+      ok: false,
+      message: tokenError?.message ?? "Could not create the applicant link.",
+    };
+  }
+
+  await supabase
+    .from("application_tokens")
+    .update({ revoked_at: new Date().toISOString() })
+    .eq("agreement_id", args.agreementId)
+    .neq("id", createdToken.id)
+    .is("revoked_at", null);
+
+  const url = agreementUrl(appUrl, token);
+
+  const uploaded = args.storagePath
+    ? await storedFileAttachment(
+        STORAGE_BUCKETS.agreements,
+        args.storagePath,
+        args.fileName ?? `${args.agreementNumber}.pdf`,
+      )
+    : null;
+
+  const delivery = await sendTemplateEmail({
+    templateKey: "AGREEMENT_SENT",
+    to: { email: args.toEmail, name: args.toName },
+    vars: {
+      applicant_name: args.toName,
+      lead_number: args.leadNumber,
+      agreement_number: args.agreementNumber,
+      application_link: url,
+    },
+    // Preserve the brochure that the existing agreement email included while
+    // adding the private generated-document link.
+    attachments: [uploaded, BROCHURE_ATTACHMENT],
+    leadId: args.leadId,
+    triggeredBy: args.actorId,
+  });
+
+  await supabase
+    .from("agreements")
+    .update({
+      document_sent_at: new Date().toISOString(),
+      document_version: AGREEMENT_DOCUMENT_VERSION,
+    })
+    .eq("id", args.agreementId);
+
+  return { ok: true, url, emailSent: delivery.status === "SENT" };
+}
+
+// ===================================================================
+// Generated agreement document
+//
+// The agreement is produced from the applicant's own answers rather than
+// uploaded as a filled-in PDF. Members may prepare and send it for leads
+// assigned to them; admins may do so for any lead.
+// ===================================================================
+
+/** Shared gate: the lead exists, the stage is open, and this person owns it. */
+async function agreementAccess(agreementId: string): Promise<
+  | { ok: true; profile: SessionProfile; leadId: string; agreementNumber: string }
+  | { ok: false; message: string }
+> {
+  const profile = await requireProfile();
+  const supabase = createAdminClient();
+
+  const { data: agreement } = await supabase
+    .from("agreements")
+    .select("id, lead_id, agreement_number, status")
+    .eq("id", agreementId)
+    .maybeSingle();
+
+  if (!agreement) return { ok: false, message: "That agreement no longer exists." };
+  if (agreement.status === "COMPLETED") {
+    return {
+      ok: false,
+      message: "This agreement is complete. Start a new version to change it.",
+    };
+  }
+
+  const { data: lead } = await supabase
+    .from("leads")
+    .select("id, current_status, assigned_member_id")
+    .eq("id", agreement.lead_id)
+    .maybeSingle();
+
+  if (!lead) return { ok: false, message: "That lead no longer exists." };
+  if (!isAdmin(profile.role) && lead.assigned_member_id !== profile.id) {
+    return { ok: false, message: "That lead is not assigned to you." };
+  }
+  if (!agreementStageIsAvailable(lead.current_status)) {
+    return {
+      ok: false,
+      message:
+        "Finish document review and approve the franchise before preparing its agreement.",
+    };
+  }
+
+  return {
+    ok: true,
+    profile,
+    leadId: agreement.lead_id,
+    agreementNumber: agreement.agreement_number,
+  };
+}
+
+/**
+ * Create the agreement record for a lead that has none yet.
+ *
+ * Previously an agreement only existed once somebody uploaded a PDF. A
+ * generated document needs a row to hold its field values from the start.
+ */
+export async function startAgreementDocument(
+  leadId: string,
+): Promise<ActionResult<{ agreementId: string }>> {
+  const profile = await requireProfile();
+  const supabase = createAdminClient();
+
+  const { data: lead } = await supabase
+    .from("leads")
+    .select("id, current_status, assigned_member_id")
+    .eq("id", leadId)
+    .maybeSingle();
+
+  if (!lead) return { ok: false, message: "That lead no longer exists." };
+  if (!isAdmin(profile.role) && lead.assigned_member_id !== profile.id) {
+    return { ok: false, message: "That lead is not assigned to you." };
+  }
+  if (!agreementStageIsAvailable(lead.current_status)) {
+    return {
+      ok: false,
+      message:
+        "Finish document review and approve the franchise before preparing its agreement.",
+    };
+  }
+
+  const { data: existing } = await supabase
+    .from("agreements")
+    .select("id, agreement_number, status, version")
+    .eq("lead_id", leadId)
+    .order("version", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  let agreementId: string;
+  let agreementNumber: string;
+
+  if (existing && existing.status !== "COMPLETED") {
+    agreementId = existing.id;
+    agreementNumber = existing.agreement_number;
+  } else {
+    const { data: created, error } = await supabase
+      .from("agreements")
+      .insert({
+        lead_id: leadId,
+        version: existing ? existing.version + 1 : 1,
+        status: "PENDING",
+        created_by: profile.id,
+      })
+      .select("id, agreement_number")
+      .single();
+
+    if (error || !created) {
+      return {
+        ok: false,
+        message: error?.message ?? "Could not start the agreement.",
+      };
+    }
+
+    agreementId = created.id;
+    agreementNumber = created.agreement_number;
+
+    await supabase.from("activity_logs").insert({
+      actor_id: profile.id,
+      entity_type: "agreement",
+      entity_id: created.id,
+      action: "AGREEMENT_DOCUMENT_STARTED",
+      summary: `Started ${created.agreement_number} from the application.`,
+    });
+  }
+
+  // Opening the document is the start of the agreement stage. Without this,
+  // the generated route could send successfully while the lead stayed at
+  // FRANCHISE_APPROVED and the rest of the pipeline never unlocked.
+  if (canTransition(lead.current_status, "AGREEMENT_PENDING")) {
+    const { error: leadError } = await supabase
+      .from("leads")
+      .update({ current_status: "AGREEMENT_PENDING" })
+      .eq("id", leadId);
+    if (leadError) return { ok: false, message: leadError.message };
+
+    await supabase.from("lead_activities").insert({
+      lead_id: leadId,
+      member_id: profile.id,
+      activity_type: "STATUS_CHANGE",
+      previous_status: lead.current_status,
+      new_status: "AGREEMENT_PENDING",
+      notes: `Agreement ${agreementNumber} prepared from the application.`,
+    });
+  }
+
+  refresh(leadId);
+  return { ok: true, data: { agreementId } };
+}
+
+/** Save the fill-in values and any clause rewrites. */
+export async function saveAgreementDocument(
+  agreementId: string,
+  values: Record<string, string>,
+  overrides: Record<string, string>,
+): Promise<ActionResult> {
+  const access = await agreementAccess(agreementId);
+  if (!access.ok) return access;
+
+  const cleanValues = pickKnownFields(values);
+  const cleanOverrides: Record<string, string> = {};
+  for (const [id, html] of Object.entries(overrides)) {
+    // Unknown ids would be dead weight; an empty override means "use standard".
+    if (CLAUSE_BY_ID.has(id) && html.trim()) cleanOverrides[id] = html.trim();
+  }
+
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("agreements")
+    .update({
+      field_values: cleanValues,
+      clause_overrides: cleanOverrides,
+    })
+    .eq("id", agreementId);
+
+  if (error) return { ok: false, message: error.message };
+
+  refresh(access.leadId);
+  return { ok: true };
+}
+
+/**
+ * Mint the customer's link, email it, and move the agreement to SENT.
+ *
+ * Any previous link for this agreement is revoked first: re-sending must not
+ * leave an older URL working, or a superseded set of terms stays reachable.
+ */
+export async function sendAgreementDocument(
+  agreementId: string,
+): Promise<ActionResult<{ url: string; emailSent: boolean }>> {
+  const access = await agreementAccess(agreementId);
+  if (!access.ok) return access;
+
+  const document = await loadAgreementDocument(agreementId);
+  if (!document) return { ok: false, message: "That agreement no longer exists." };
+
+  const missing = missingRequiredFields(document.values);
+  if (missing.length > 0) {
+    return {
+      ok: false,
+      message: `Fill in ${missing.length} more ${missing.length === 1 ? "field" : "fields"} first: ${missing
+        .slice(0, 3)
+        .map((field) => field.label)
+        .join(", ")}${missing.length > 3 ? "…" : ""}`,
+    };
+  }
+
+  const supabase = createAdminClient();
+
+  const { data: lead } = await supabase
+    .from("leads")
+    .select("id, lead_number, full_name, email, current_status")
+    .eq("id", access.leadId)
+    .maybeSingle();
+
+  if (!lead) return { ok: false, message: "That lead no longer exists." };
+
+  const delivery = await deliverAgreementEmail({
+    agreementId,
+    agreementNumber: document.agreementNumber,
+    leadId: access.leadId,
+    leadNumber: lead.lead_number,
+    toEmail: lead.email,
+    toName: lead.full_name,
+    actorId: access.profile.id,
+  });
+  if (!delivery.ok) return delivery;
+
+  const { url, emailSent } = delivery;
+
+  const { error: agreementError } = await supabase
+    .from("agreements")
+    .update({ status: "SENT", sent_at: new Date().toISOString() })
+    .eq("id", agreementId);
+  if (agreementError) return { ok: false, message: agreementError.message };
+
+  // Usually startAgreementDocument already made the first transition. Keep
+  // this action self-contained as well, so an older pending row cannot leave
+  // the agreement and lead statuses disagreeing.
+  let leadStatus = lead.current_status;
+  if (canTransition(leadStatus, "AGREEMENT_PENDING")) {
+    const { error } = await supabase
+      .from("leads")
+      .update({ current_status: "AGREEMENT_PENDING" })
+      .eq("id", lead.id);
+    if (!error) {
+      await supabase.from("lead_activities").insert({
+        lead_id: lead.id,
+        member_id: access.profile.id,
+        activity_type: "STATUS_CHANGE",
+        previous_status: leadStatus,
+        new_status: "AGREEMENT_PENDING",
+        notes: `Agreement ${document.agreementNumber} prepared from the application.`,
+      });
+      leadStatus = "AGREEMENT_PENDING";
+    }
+  }
+  if (canTransition(leadStatus, "AGREEMENT_SENT")) {
+    const { error } = await supabase
+      .from("leads")
+      .update({ current_status: "AGREEMENT_SENT" })
+      .eq("id", lead.id);
+    if (!error) {
+      await supabase.from("lead_activities").insert({
+        lead_id: lead.id,
+        member_id: access.profile.id,
+        activity_type: "STATUS_CHANGE",
+        previous_status: leadStatus,
+        new_status: "AGREEMENT_SENT",
+        notes: `Agreement ${document.agreementNumber} sent to the applicant.`,
+      });
+    }
+  }
+
+  await supabase.from("activity_logs").insert({
+    actor_id: access.profile.id,
+    entity_type: "agreement",
+    entity_id: agreementId,
+    action: "AGREEMENT_DOCUMENT_SENT",
+    summary: `Sent ${document.agreementNumber} to ${lead.email}.`,
+  });
+
+  refresh(access.leadId);
+  return { ok: true, data: { url, emailSent } };
+}
+
+/** Render the unsaved editor state, for the preview dialog. */
+export async function previewAgreementDocument(
+  agreementId: string,
+  values: Record<string, string>,
+  overrides: Record<string, string>,
+): Promise<ActionResult<{ html: string; missing: string[] }>> {
+  const access = await agreementAccess(agreementId);
+  if (!access.ok) return access;
+
+  const document = await loadAgreementDocument(agreementId);
+  if (!document) return { ok: false, message: "That agreement no longer exists." };
+
+  // Preview what is on screen, not what was last saved.
+  const merged = { ...document.values, ...pickKnownFields(values) };
+
+  return {
+    ok: true,
+    data: {
+      html: renderFullDocument(merged, overrides, {
+        agreementNumber: document.agreementNumber,
+        version: document.version,
+        documentVersion: AGREEMENT_DOCUMENT_VERSION,
+        franchiseeName: merged.franchisee_name || document.franchiseeName,
+      }),
+      missing: missingRequiredFields(merged).map((field) => field.label),
+    },
+  };
 }

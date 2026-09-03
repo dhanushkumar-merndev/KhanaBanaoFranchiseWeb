@@ -112,6 +112,8 @@ export default async function MemberLeadDetailPage({
             activation={activation}
             members={[]}
             isAdmin={false}
+            // getLeadDetail was scoped to this member, so reaching here proves it.
+            isAssignedMember
           />
         </div>
       </main>

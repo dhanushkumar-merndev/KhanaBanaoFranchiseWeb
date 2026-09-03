@@ -89,6 +89,7 @@ export function LeadTabPanel({
   activation,
   members,
   isAdmin,
+  isAssignedMember = false,
 }: {
   tab: LeadTab;
   lead: LeadDetail;
@@ -97,6 +98,8 @@ export function LeadTabPanel({
   activation: ActivationReadiness;
   members: { id: string; full_name: string }[];
   isAdmin: boolean;
+  /** True on the member pages, where the lead is already scoped to the viewer. */
+  isAssignedMember?: boolean;
 }) {
   // Nothing further is owed on a rejected lead.
   const active = lead.current_status !== "REJECTED";
@@ -137,7 +140,20 @@ export function LeadTabPanel({
           leadId={lead.id}
           leadStatus={lead.current_status}
           agreement={pipeline.agreement}
+          agreementDocument={
+            pipeline.agreementDocument
+              ? {
+                  agreementId: pipeline.agreementDocument.agreementId,
+                  agreementNumber: pipeline.agreementDocument.agreementNumber,
+                  values: pipeline.agreementDocument.values,
+                  overrides: pipeline.agreementDocument.overrides,
+                  documentSentAt: pipeline.agreementDocument.documentSentAt,
+                  canSend: pipeline.agreementDocument.status !== "COMPLETED",
+                }
+              : null
+          }
           isAdmin={isAdmin}
+          isAssignedMember={isAssignedMember}
         />
       );
     case "payment":

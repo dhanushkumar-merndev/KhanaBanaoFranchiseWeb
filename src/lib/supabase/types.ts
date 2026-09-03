@@ -157,7 +157,9 @@ export type ApplicationTokenRow = {
   lead_id: string;
   application_id: string | null;
   token_hash: string;
-  purpose: "APPLICATION" | "DOCUMENTS";
+  purpose: "APPLICATION" | "DOCUMENTS" | "AGREEMENT";
+  /** Set only for AGREEMENT tokens — the generated document the link opens. */
+  agreement_id: string | null;
   expires_at: string;
   used_at: string | null;
   revoked_at: string | null;
@@ -223,6 +225,12 @@ export type AgreementRow = Timestamps & {
   company_signed_at: string | null;
   completed_at: string | null;
   notes: string | null;
+  /** Fill-in values for the generated document, keyed by agreement field key. */
+  field_values: Json;
+  /** Per-agreement clause rewrites, keyed by clause id. */
+  clause_overrides: Json;
+  document_version: string | null;
+  document_sent_at: string | null;
   created_by: string | null;
 };
 
