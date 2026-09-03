@@ -13,6 +13,7 @@ import {
 import { renderClauses } from "./render";
 import type { AgreementDocument } from "@/lib/data/agreement-document";
 import type { EmailAttachment } from "@/lib/email/attachments";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const TEMPLATE_PATH = "public/Khana-banao-Franchise-Master.pdf";
 const PAGE_WIDTH = 612;
@@ -170,9 +171,60 @@ async function appendOverrides(pdf: PDFDocument, document: AgreementDocument, re
   }
 }
 
+async function embedFranchisorSignature(
+  pdf: PDFDocument,
+  document: AgreementDocument,
+  suppliedBytes?: Uint8Array,
+) {
+  if (!document.franchisorSignaturePath) return;
+
+  let bytes = suppliedBytes;
+  if (!bytes) {
+    const { data, error } = await createAdminClient()
+      .storage.from("agreements")
+      .download(document.franchisorSignaturePath);
+    if (error || !data) {
+      throw new Error("The saved Khana Banao signature image could not be read.");
+    }
+    bytes = new Uint8Array(await data.arrayBuffer());
+  }
+
+  const isPng =
+    bytes.length >= 8 &&
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47;
+  const isJpeg =
+    bytes.length >= 3 &&
+    bytes[0] === 0xff &&
+    bytes[1] === 0xd8 &&
+    bytes[2] === 0xff;
+
+  if (!isPng && !isJpeg) {
+    throw new Error("The saved signature must be a PNG or JPG image.");
+  }
+
+  const image = isPng ? await pdf.embedPng(bytes) : await pdf.embedJpg(bytes);
+  const maxWidth = 108;
+  const maxHeight = 27;
+  const scale = Math.min(maxWidth / image.width, maxHeight / image.height);
+  const width = image.width * scale;
+  const height = image.height * scale;
+  const page = pdf.getPage(20);
+  page.drawImage(image, {
+    x: 130 + (maxWidth - width) / 2,
+    y: 541 + (maxHeight - height) / 2,
+    width,
+    height,
+  });
+}
+
 /** Fill the approved public PDF itself, preserving its exact branded pages. */
 export async function generateAgreementPdf(
   document: AgreementDocument,
+  /** Test/preview hook; production normally reads the private stored image. */
+  signatureImageBytes?: Uint8Array,
 ): Promise<Buffer> {
   const template = await readFile(path.join(process.cwd(), TEMPLATE_PATH));
   // Vitest/JSDOM and some serverless runtimes create Buffer in a different JS
@@ -191,6 +243,7 @@ export async function generateAgreementPdf(
     const value = placement.key.startsWith("$") ? special[placement.key] : document.values[placement.key];
     drawValue(page, value ?? "", placement, regular, bold);
   }
+  await embedFranchisorSignature(pdf, document, signatureImageBytes);
   await appendOverrides(pdf, document, regular, bold);
   return Buffer.from(await pdf.save());
 }

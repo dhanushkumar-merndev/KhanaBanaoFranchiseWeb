@@ -20,10 +20,12 @@ export type AgreementDocument = {
   values: AgreementFieldValues;
   overrides: Record<string, string>;
   documentSentAt: string | null;
+  franchisorSignaturePath: string | null;
+  franchisorSignatureFileName: string | null;
 };
 
 const AGREEMENT_COLUMNS =
-  "id, lead_id, agreement_number, version, status, field_values, clause_overrides, document_sent_at";
+  "id, lead_id, agreement_number, version, status, field_values, clause_overrides, document_sent_at, franchisor_signature_path, franchisor_signature_file_name";
 
 const APPLICATION_COLUMNS =
   "personal_details, address_details, business_details, franchise_details, approved_territory, approved_investment";
@@ -78,6 +80,10 @@ async function assemble(
     values,
     overrides: asRecord(agreement.clause_overrides),
     documentSentAt: (agreement.document_sent_at as string | null) ?? null,
+    franchisorSignaturePath:
+      (agreement.franchisor_signature_path as string | null) ?? null,
+    franchisorSignatureFileName:
+      (agreement.franchisor_signature_file_name as string | null) ?? null,
   };
 }
 

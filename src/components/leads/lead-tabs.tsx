@@ -149,6 +149,9 @@ export function LeadTabPanel({
                   overrides: pipeline.agreementDocument.overrides,
                   documentSentAt: pipeline.agreementDocument.documentSentAt,
                   canSend: pipeline.agreementDocument.status !== "COMPLETED",
+                  franchisorSignatureFileName:
+                    pipeline.agreementDocument.franchisorSignatureFileName,
+                  canUploadSignature: isAdmin,
                 }
               : null
           }

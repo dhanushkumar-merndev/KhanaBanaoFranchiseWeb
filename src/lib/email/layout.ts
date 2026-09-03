@@ -1,4 +1,3 @@
-import { emailAssetBaseUrl } from "@/lib/env";
 import { site } from "@/lib/site";
 
 /**
@@ -10,8 +9,9 @@ import { site } from "@/lib/site";
  * header, the logo or the footer. One change here restyles all sixteen mails.
  *
  * Written to the constraints of real mail clients: table layout, inline styles,
- * no external CSS, no web fonts, and a flattened PNG logo (the source mark is
- * transparent, which Outlook renders on a black ground).
+ * no external CSS or web fonts. The logo is stored in Brevo's image gallery so
+ * mail clients load it from Brevo's stable image CDN rather than the branded
+ * tracking hostname used to rewrite images hosted on the application domain.
  */
 
 const MAROON = "#8e1218";
@@ -22,19 +22,16 @@ const INK_SOFT = "#696158";
 const CANVAS = "#f0e6d8";
 const CREAM = "#faf5ee";
 const LINE = "#e7ddd0";
-// Bump when the public email logo changes or an email proxy has cached a
-// failed response. Gmail keys its image cache by the complete URL.
-const EMAIL_LOGO_VERSION = "20260903";
-
+// Exact copy of https://www.khanabanaopartner.com/logo-mark.png uploaded to
+// Brevo's image gallery. Keeping it on Brevo's image CDN avoids the broken
+// r.mail branded proxy certificate that Gmail rejects.
+const EMAIL_LOGO_URL =
+  "https://img.mailinblue.com/11977921/images/rnb/original/6a9948b125aaba004d88d558.png";
 const FONT =
   "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif";
 
 /** Inline style for a call-to-action link — templates paste this verbatim. */
 export const EMAIL_BUTTON_STYLE = `display:inline-block;background:${CRIMSON};color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;line-height:1;padding:14px 30px;border-radius:8px;`;
-
-function escapeAttr(value: string): string {
-  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
-}
 
 /**
  * Wrap rendered content HTML in the Khana Banao email shell.
@@ -46,7 +43,6 @@ export function wrapEmailHtml(
   contentHtml: string,
   options: { preheader?: string } = {},
 ): string {
-  const logo = `${emailAssetBaseUrl}/email/logo-header.png?v=${EMAIL_LOGO_VERSION}`;
   const preheader = options.preheader?.trim();
 
   return `<!doctype html>
@@ -87,7 +83,7 @@ ${
 
         <tr>
           <td align="center" style="background:${MAROON};padding:26px 24px 22px;">
-            <img src="${escapeAttr(logo)}" width="220" height="75" alt="${escapeAttr(site.name)}" style="display:block;width:220px;height:auto;max-width:80%;">
+            <img src="${EMAIL_LOGO_URL}" width="252" height="85" alt="Khana Banao — Powered by Food Chain System" style="display:block;width:252px;height:auto;max-width:82%;margin:0 auto;color:#ffffff;font-family:${FONT};font-size:15px;line-height:1.4;text-align:center;">
           </td>
         </tr>
         <tr><td style="height:4px;background:${GOLD};font-size:0;line-height:0;">&nbsp;</td></tr>

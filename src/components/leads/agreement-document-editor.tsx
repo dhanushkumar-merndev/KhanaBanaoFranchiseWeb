@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ChevronDown,
@@ -9,12 +9,14 @@ import {
   Save,
   Send,
   Sparkles,
+  Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
   downloadAgreementDocument,
   saveAgreementDocument,
   sendAgreementDocument,
+  uploadFranchisorSignature,
 } from "@/app/actions/agreements";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,6 +46,8 @@ export type AgreementDocumentState = {
   overrides: Record<string, string>;
   documentSentAt: string | null;
   canSend: boolean;
+  franchisorSignatureFileName: string | null;
+  canUploadSignature: boolean;
 };
 
 export function AgreementDocumentEditor({
@@ -57,6 +61,9 @@ export function AgreementDocumentEditor({
   const [saving, setSaving] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
+  const [signatureFileName, setSignatureFileName] = useState(
+    state.franchisorSignatureFileName,
+  );
 
   const dirty =
     JSON.stringify(values) !== JSON.stringify(state.values) ||
@@ -154,7 +161,7 @@ export function AgreementDocumentEditor({
           </Button>
           <Button
             size="sm"
-            disabled={!state.canSend || missing.length > 0}
+            disabled={!state.canSend || missing.length > 0 || !signatureFileName}
             onClick={() => setSendOpen(true)}
           >
             <Send />
@@ -189,6 +196,14 @@ export function AgreementDocumentEditor({
                   onChange={(value) => set(field.key, value)}
                 />
               ))}
+              {section.id === "signatures" && (
+                <FranchisorSignatureUpload
+                  agreementId={state.agreementId}
+                  fileName={signatureFileName}
+                  canUpload={state.canUploadSignature}
+                  onUploaded={setSignatureFileName}
+                />
+              )}
             </div>
           </section>
         ))}
@@ -220,12 +235,93 @@ export function AgreementDocumentEditor({
         }}
       >
         <p className="text-[0.82rem] leading-relaxed text-ink-soft">
-          The applicant receives one personalised, auto-filled PDF attachment.
-          There is no web-page link or “Open agreement” button. The agreement
-          moves to <strong>Sent</strong>.
+          The applicant receives one personalised PDF with the uploaded Khana
+          Banao signature embedded on the franchisor signature line. There is
+          no web-page link or “Open agreement” button. The agreement moves to
+          <strong> Sent</strong>.
         </p>
       </ConfirmDialog>
     </Card>
+  );
+}
+
+function FranchisorSignatureUpload({
+  agreementId,
+  fileName,
+  canUpload,
+  onUploaded,
+}: {
+  agreementId: string;
+  fileName: string | null;
+  canUpload: boolean;
+  onUploaded: (fileName: string) => void;
+}) {
+  const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const upload = async (file: File) => {
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.set("signature", file);
+      const result = await uploadFranchisorSignature(agreementId, formData);
+      if (!result.ok) {
+        toast.error(result.message);
+        return;
+      }
+      onUploaded(result.data.fileName);
+      toast.success("Khana Banao signature uploaded and added to the PDF.");
+      router.refresh();
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  };
+
+  return (
+    <div className="sm:col-span-2 rounded-lg border border-line bg-surface-muted/40 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-[0.78rem] font-semibold text-ink">
+            Khana Banao authorised signature <span className="text-danger">*</span>
+          </p>
+          <p className="mt-0.5 text-[0.72rem] leading-relaxed text-ink-soft">
+            {fileName
+              ? `${fileName} will be embedded on the franchisor signature line.`
+              : "Upload a transparent PNG or JPG, up to 2 MB, before sending."}
+          </p>
+        </div>
+        {canUpload ? (
+          <>
+            <input
+              ref={inputRef}
+              type="file"
+              accept="image/png,image/jpeg"
+              className="sr-only"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void upload(file);
+              }}
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              loading={uploading}
+              onClick={() => inputRef.current?.click()}
+            >
+              <Upload />
+              {fileName ? "Replace signature" : "Upload signature"}
+            </Button>
+          </>
+        ) : (
+          <span className="text-[0.72rem] font-medium text-ink-soft">
+            An administrator must upload the company signature.
+          </span>
+        )}
+      </div>
+    </div>
   );
 }
 

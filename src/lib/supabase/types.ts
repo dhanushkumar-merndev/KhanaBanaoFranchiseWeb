@@ -229,6 +229,8 @@ export type AgreementRow = Timestamps & {
   clause_overrides: Json;
   document_version: string | null;
   document_sent_at: string | null;
+  franchisor_signature_path: string | null;
+  franchisor_signature_file_name: string | null;
   created_by: string | null;
 };
 

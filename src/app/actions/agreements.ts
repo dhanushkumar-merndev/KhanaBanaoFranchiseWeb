@@ -32,8 +32,11 @@ import {
   ALLOWED_AGREEMENT_TYPES,
   MAX_AGREEMENT_BYTES,
   agreementPath,
+  agreementSignaturePath,
+  checkUpload,
   removeFile,
   signedUrlFor,
+  uploadFile,
 } from "@/lib/storage";
 import { AGREEMENT_STATUS_LABELS } from "@/lib/domain/status";
 import type { ActionResult } from "@/lib/validation/result";
@@ -67,6 +70,8 @@ const ORDER: AgreementStatus[] = [
 ];
 const AGREEMENT_UPLOAD_PURPOSE = "AGREEMENT_FILE";
 const UPLOAD_RECEIPT_TTL_MS = 15 * 60 * 1000;
+const MAX_SIGNATURE_BYTES = 2 * 1024 * 1024;
+const SIGNATURE_TYPES = ["image/png", "image/jpeg"] as const;
 
 export type AgreementUploadMetadata = {
   fileName: string;
@@ -513,6 +518,12 @@ async function deliverAgreementEmail(args: {
       message: "That agreement no longer exists.",
     };
   }
+  if (!document.franchisorSignaturePath) {
+    return {
+      ok: false,
+      message: "Upload the authorised Khana Banao signature before sending.",
+    };
+  }
 
   let attachment;
   try {
@@ -751,6 +762,73 @@ export async function saveAgreementDocument(
 
   refresh(access.leadId);
   return { ok: true };
+}
+
+/** Store the authorised company signature that is embedded in the sent PDF. */
+export async function uploadFranchisorSignature(
+  agreementId: string,
+  formData: FormData,
+): Promise<ActionResult<{ fileName: string }>> {
+  const profile = await requireAdmin();
+  const signature = formData.get("signature");
+  if (!(signature instanceof File)) {
+    return { ok: false, message: "Choose a PNG or JPG signature image." };
+  }
+
+  const checked = checkUpload(signature, {
+    maxBytes: MAX_SIGNATURE_BYTES,
+    allowed: SIGNATURE_TYPES,
+  });
+  if (!checked.ok) return { ok: false, message: checked.message };
+
+  const supabase = createAdminClient();
+  const { data: agreement } = await supabase
+    .from("agreements")
+    .select("id, lead_id, agreement_number, status, franchisor_signature_path")
+    .eq("id", agreementId)
+    .maybeSingle();
+  if (!agreement) return { ok: false, message: "That agreement no longer exists." };
+  if (agreement.status === "COMPLETED") {
+    return { ok: false, message: "A completed agreement cannot be changed." };
+  }
+
+  const path = agreementSignaturePath(
+    agreement.lead_id,
+    agreement.id,
+    signature.name,
+  );
+  const uploaded = await uploadFile(STORAGE_BUCKETS.agreements, path, signature);
+  if (!uploaded.ok) return uploaded;
+
+  const { error } = await supabase
+    .from("agreements")
+    .update({
+      franchisor_signature_path: path,
+      franchisor_signature_file_name: signature.name,
+    })
+    .eq("id", agreement.id);
+  if (error) {
+    await removeFile(STORAGE_BUCKETS.agreements, path);
+    return { ok: false, message: error.message };
+  }
+
+  if (agreement.franchisor_signature_path) {
+    await removeFile(
+      STORAGE_BUCKETS.agreements,
+      agreement.franchisor_signature_path,
+    );
+  }
+
+  await supabase.from("activity_logs").insert({
+    actor_id: profile.id,
+    entity_type: "agreement",
+    entity_id: agreement.id,
+    action: "FRANCHISOR_SIGNATURE_UPLOADED",
+    summary: `Updated the Khana Banao signature for ${agreement.agreement_number}.`,
+  });
+
+  refresh(agreement.lead_id);
+  return { ok: true, data: { fileName: signature.name } };
 }
 
 /**

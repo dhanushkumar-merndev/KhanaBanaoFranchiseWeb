@@ -94,6 +94,14 @@ export function agreementPath(
   return `leads/${leadId}/v${version}-${Date.now()}-${randomUUID()}-${safeFileName(fileName)}`;
 }
 
+export function agreementSignaturePath(
+  leadId: string,
+  agreementId: string,
+  fileName: string,
+): string {
+  return `leads/${leadId}/signatures/${agreementId}-${Date.now()}-${safeFileName(fileName)}`;
+}
+
 export function approvalLetterPath(
   applicationId: string,
   fileName: string,

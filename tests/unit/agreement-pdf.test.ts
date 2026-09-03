@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { PDFDocument } from "pdf-lib";
 import { generateAgreementPdf } from "@/lib/agreement/pdf";
@@ -12,6 +14,8 @@ const document: AgreementDocument = {
   leadNumber: "KB-L01001",
   franchiseeName: "Ansar - Testing",
   documentSentAt: null,
+  franchisorSignaturePath: null,
+  franchisorSignatureFileName: null,
   overrides: {},
   values: {
     agreement_date: "2026-09-03",
@@ -62,5 +66,22 @@ describe("agreement PDF", () => {
     });
     const pdf = await PDFDocument.load(Uint8Array.from(bytes));
     expect(pdf.getPageCount()).toBe(22);
+  });
+
+  it("embeds the authorised company signature image before sending", async () => {
+    const signature = await readFile(path.join(process.cwd(), "public/logo-mark.png"));
+    const unsigned = await generateAgreementPdf(document);
+    const signed = await generateAgreementPdf(
+      {
+        ...document,
+        franchisorSignaturePath: "private/company-signature.png",
+        franchisorSignatureFileName: "company-signature.png",
+      },
+      Uint8Array.from(signature),
+    );
+
+    expect(signed.byteLength).toBeGreaterThan(unsigned.byteLength);
+    const pdf = await PDFDocument.load(Uint8Array.from(signed));
+    expect(pdf.getPageCount()).toBe(21);
   });
 });
