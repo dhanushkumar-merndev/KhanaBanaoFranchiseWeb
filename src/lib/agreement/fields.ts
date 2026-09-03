@@ -162,9 +162,11 @@ export const AGREEMENT_SECTIONS: readonly FieldSection[] = [
       { key: "arbitration_seat", label: "Arbitration seat", type: "text", required: true },
       {
         key: "authorised_signatory",
-        label: "Authorised franchisor signatory",
+        label: "Authorised franchisor signatory name",
         type: "text",
         required: true,
+        hint:
+          "Enter the authorised person's name for Schedule A. Upload the complete signed agreement PDF after signing.",
       },
     ],
   },

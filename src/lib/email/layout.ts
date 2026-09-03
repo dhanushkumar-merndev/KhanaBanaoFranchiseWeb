@@ -22,6 +22,9 @@ const INK_SOFT = "#696158";
 const CANVAS = "#f0e6d8";
 const CREAM = "#faf5ee";
 const LINE = "#e7ddd0";
+// Bump when the public email logo changes or an email proxy has cached a
+// failed response. Gmail keys its image cache by the complete URL.
+const EMAIL_LOGO_VERSION = "20260903";
 
 const FONT =
   "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif";
@@ -43,7 +46,7 @@ export function wrapEmailHtml(
   contentHtml: string,
   options: { preheader?: string } = {},
 ): string {
-  const logo = `${emailAssetBaseUrl}/email/logo-header.png`;
+  const logo = `${emailAssetBaseUrl}/email/logo-header.png?v=${EMAIL_LOGO_VERSION}`;
   const preheader = options.preheader?.trim();
 
   return `<!doctype html>

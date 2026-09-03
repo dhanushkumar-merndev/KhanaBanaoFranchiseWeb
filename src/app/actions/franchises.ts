@@ -11,6 +11,7 @@ import {
 } from "@/lib/domain/enums";
 import { canApproveFranchise, canTransition } from "@/lib/domain/transitions";
 import { overallDocumentStatus } from "@/lib/domain/documents";
+import type { EmailAttachment } from "@/lib/email/attachments";
 import { sendTemplateEmail } from "@/lib/email/send";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -176,6 +177,7 @@ export async function approveFranchise(
     return { ok: false, message: "There is no application to approve." };
 
   let letterPath: string | null = null;
+  let letterAttachment: EmailAttachment | null = null;
   if (letter instanceof File && letter.size > 0) {
     const check = checkUpload(letter, {
       maxBytes: MAX_AGREEMENT_BYTES,
@@ -195,6 +197,14 @@ export async function approveFranchise(
       letter,
     );
     if (!uploaded.ok) return { ok: false, message: uploaded.message };
+
+    // The storage bucket is private for the admin record. Attach the same
+    // bytes directly so the applicant receives the letter without exposing a
+    // public or expiring storage URL in the email.
+    letterAttachment = {
+      name: letter.name || `${application.application_number}-approval-letter.pdf`,
+      content: Buffer.from(await letter.arrayBuffer()).toString("base64"),
+    };
   }
 
   await supabase
@@ -291,6 +301,16 @@ export async function approveFranchise(
         application_number: application.application_number,
         territory,
       },
+      ...(letterAttachment
+        ? {
+            override: {
+              subject: "Congratulations — your KHANA BANAO franchise is approved",
+              bodyHtml:
+                '<h2 style="margin:0 0 16px;font-family:Georgia,\'Times New Roman\',serif;font-size:21px;line-height:1.3;color:#8e1218;font-weight:700;">Your franchise is approved</h2><p>Hi {{applicant_name}},</p><p>Application <strong>{{application_number}}</strong> has been approved for the territory <strong>{{territory}}</strong>. Congratulations &mdash; we are glad to have you with us.</p><p>Your official approval letter is attached to this email as a PDF.</p><p>Our team will share your franchise agreement next. Nothing is needed from you until it arrives.</p>',
+            },
+            attachments: [letterAttachment],
+          }
+        : {}),
       leadId,
       triggeredBy: profile.id,
     });
